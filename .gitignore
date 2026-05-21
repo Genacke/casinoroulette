@@ -1,0 +1,6 @@
+node_modules/
+database/casino.sqlite
+database/casino.sqlite-shm
+database/casino.sqlite-wal
+.env
+*.log

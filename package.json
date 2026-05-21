@@ -1,0 +1,31 @@
+{
+  "name": "dofus-roulette-casino",
+  "version": "1.0.0",
+  "description": "Roulette casino style pour serveur prive Dofus avec panel admin securise.",
+  "main": "server/app.js",
+  "scripts": {
+    "dev": "node --watch server/app.js",
+    "start": "node server/app.js",
+    "seed": "node database/seed.js",
+    "check": "node --check server/app.js && node --check server/config.js && node --check server/db.js && node --check server/rounds.js && node --check routes/auth.routes.js && node --check routes/game.routes.js && node --check routes/admin.routes.js && node --check client/app.js && node --check admin/app.js"
+  },
+  "keywords": [
+    "roulette",
+    "dofus",
+    "casino",
+    "express",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "sqlite3": "^5.1.7"
+  }
+}

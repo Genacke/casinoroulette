@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dofus Royale Admin</title>
+    <link rel="stylesheet" href="/public/styles.css" />
+    <link rel="stylesheet" href="/public/admin.css" />
+    <script defer src="/public/common.js"></script>
+    <script defer src="/admin/app.js"></script>
+  </head>
+  <body>
+    <div class="ambient ambient-left"></div>
+    <div class="ambient ambient-right"></div>
+
+    <div class="page-shell">
+      <header class="site-header">
+        <div>
+          <p class="eyebrow">Controle croupier</p>
+          <h1>Panel Admin Roulette</h1>
+        </div>
+        <div class="header-actions">
+          <a class="ghost-button" href="/">Retour joueur</a>
+          <button id="adminLogoutButton" class="ghost-button hidden">Deconnexion</button>
+        </div>
+      </header>
+
+      <section id="adminAuthGate" class="auth-layout admin-auth-layout">
+        <article class="hero-card">
+          <p class="eyebrow">Operations sensibles</p>
+          <h2>Credits manuels, retraits, logs et surveillance serveur.</h2>
+          <p class="hero-copy">
+            Toute modification de solde passe ici. Les joueurs ne peuvent jamais
+            s’auto-crediter ni manipuler le resultat de la roulette.
+          </p>
+        </article>
+
+        <article class="panel auth-panel">
+          <form id="adminLoginForm" class="auth-form">
+            <label>
+              <span>Pseudo admin</span>
+              <input type="text" name="username" required />
+            </label>
+            <label>
+              <span>Mot de passe</span>
+              <input type="password" name="password" required />
+            </label>
+            <button class="primary-button" type="submit">Ouvrir le dashboard</button>
+          </form>
+        </article>
+      </section>
+
+      <main id="adminApp" class="admin-grid hidden">
+        <section class="panel metrics-panel">
+          <div class="metric-card">
+            <span>Joueurs</span>
+            <strong id="adminPlayerCount">0</strong>
+          </div>
+          <div class="metric-card">
+            <span>Solde cumule</span>
+            <strong id="adminBalancePool">0 kamas</strong>
+          </div>
+          <div class="metric-card">
+            <span>Total wagered</span>
+            <strong id="adminTotalWagered">0 kamas</strong>
+          </div>
+          <div class="metric-card">
+            <span>Jackpot</span>
+            <strong id="adminJackpot">0 kamas</strong>
+          </div>
+        </section>
+
+        <section class="panel user-admin-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Joueurs</p>
+              <h3>Recherche et ajustement</h3>
+            </div>
+          </div>
+
+          <form id="playerSearchForm" class="toolbar-form">
+            <input id="playerSearchInput" type="text" placeholder="Pseudo joueur..." />
+            <button class="secondary-button" type="submit">Rechercher</button>
+          </form>
+
+          <div id="playerResults" class="table-shell"></div>
+
+          <div class="admin-adjust-grid">
+            <div class="sub-panel">
+              <div class="section-title">Selection</div>
+              <div id="selectedPlayerCard" class="selected-player-card">
+                Aucun joueur selectionne.
+              </div>
+            </div>
+
+            <form id="balanceAdjustForm" class="sub-panel adjust-form">
+              <div class="section-title">Crediter / debiter</div>
+              <label>
+                <span>Action</span>
+                <select name="action">
+                  <option value="credit">Crediter</option>
+                  <option value="debit">Retirer</option>
+                </select>
+              </label>
+              <label>
+                <span>Montant</span>
+                <input name="amount" type="number" min="1" required />
+              </label>
+              <label>
+                <span>Raison / note</span>
+                <input name="note" type="text" minlength="3" maxlength="180" required />
+              </label>
+              <button class="primary-button" type="submit">Appliquer l'ajustement</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="panel winners-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Performance</p>
+              <h3>Plus gros gagnants</h3>
+            </div>
+          </div>
+          <div id="winningPlayersList" class="leaderboard-list"></div>
+        </section>
+
+        <section class="panel logs-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Logs</p>
+              <h3>Supervision temps reel</h3>
+            </div>
+            <div class="log-filter-row">
+              <button class="ghost-button log-filter active" data-log-type="spins">Spins</button>
+              <button class="ghost-button log-filter" data-log-type="bets">Mises</button>
+              <button class="ghost-button log-filter" data-log-type="balances">Soldes</button>
+              <button class="ghost-button log-filter" data-log-type="logins">Connexions</button>
+            </div>
+          </div>
+          <div id="logsTable" class="table-shell"></div>
+        </section>
+
+        <section class="panel admin-activity-grid">
+          <article class="sub-panel">
+            <div class="section-title">Dernieres connexions</div>
+            <div id="recentLogins" class="mini-log-list"></div>
+          </article>
+          <article class="sub-panel">
+            <div class="section-title">Derniers ajustements</div>
+            <div id="recentBalances" class="mini-log-list"></div>
+          </article>
+          <article class="sub-panel">
+            <div class="section-title">Derniers spins</div>
+            <div id="recentSpins" class="mini-log-list"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

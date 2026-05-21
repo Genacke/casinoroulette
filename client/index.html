@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dofus Royale Roulette</title>
+    <link rel="stylesheet" href="/public/styles.css" />
+    <script defer src="/public/common.js"></script>
+    <script defer src="/client/app.js"></script>
+  </head>
+  <body>
+    <div class="ambient ambient-left"></div>
+    <div class="ambient ambient-right"></div>
+
+    <div class="page-shell">
+      <header class="site-header">
+        <div>
+          <p class="eyebrow">Serveur prive Dofus</p>
+          <h1>Dofus Royale Roulette</h1>
+        </div>
+
+        <div class="header-actions">
+          <span class="status-pill">RNG serveur securise</span>
+          <button id="soundToggle" class="ghost-button">Son OFF</button>
+          <a id="adminShortcut" class="ghost-button hidden" href="/admin">Panel admin</a>
+          <button id="logoutButton" class="ghost-button hidden">Deconnexion</button>
+        </div>
+      </header>
+
+      <section id="authGate" class="auth-layout">
+        <article class="hero-card">
+          <p class="eyebrow">Casino moderne</p>
+          <h2>La roulette ou les kamas changent de camp, jamais la securite.</h2>
+          <p class="hero-copy">
+            Les kamas sont remis IN GAME a un admin ou croupier, puis credites
+            manuellement via le panel securise. Le resultat de la roue est calcule
+            uniquement cote serveur.
+          </p>
+
+          <div class="feature-list">
+            <div class="feature-chip">Roulette 0-36</div>
+            <div class="feature-chip">Rounds toutes les 2 min</div>
+            <div class="feature-chip">Jackpot sur le 0</div>
+            <div class="feature-chip">Leaderboard</div>
+            <div class="feature-chip">Historique complet</div>
+            <div class="feature-chip">Auto inscription</div>
+            <div class="feature-chip">Chat de table</div>
+          </div>
+        </article>
+
+        <article class="panel auth-panel">
+          <div class="tab-row">
+            <button class="tab-button active" data-auth-tab="login">Connexion</button>
+            <button class="tab-button" data-auth-tab="register">Inscription</button>
+          </div>
+
+          <form id="loginForm" class="auth-form">
+            <label>
+              <span>Pseudo</span>
+              <input type="text" name="username" minlength="3" maxlength="16" required />
+            </label>
+            <label>
+              <span>Mot de passe</span>
+              <input type="password" name="password" minlength="8" maxlength="72" required />
+            </label>
+            <button class="primary-button" type="submit">Entrer dans la salle</button>
+          </form>
+
+          <form id="registerForm" class="auth-form hidden">
+            <label>
+              <span>Pseudo</span>
+              <input type="text" name="username" minlength="3" maxlength="16" required />
+            </label>
+            <label>
+              <span>Mot de passe</span>
+              <input type="password" name="password" minlength="8" maxlength="72" required />
+            </label>
+            <button class="primary-button" type="submit">Creer mon compte</button>
+          </form>
+
+          <div class="auth-note">
+            <strong>Rappel important :</strong> les joueurs ne peuvent jamais se crediter
+            eux-memes. Le solde n'est modifiable que depuis le panel admin.
+          </div>
+        </article>
+      </section>
+
+      <main id="playerApp" class="app-grid hidden">
+        <section class="panel metrics-panel">
+          <div class="metric-card">
+            <span>Solde</span>
+            <strong id="balanceValue">0 kamas</strong>
+          </div>
+          <div class="metric-card">
+            <span>Jackpot</span>
+            <strong id="jackpotValue">0 kamas</strong>
+          </div>
+          <div class="metric-card">
+            <span>Niveau</span>
+            <strong id="levelValue">1</strong>
+          </div>
+          <div class="metric-card">
+            <span>Profit total</span>
+            <strong id="profitValue">0 kamas</strong>
+          </div>
+        </section>
+
+        <section class="panel wheel-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Table principale</p>
+              <h3>Roulette live</h3>
+            </div>
+            <div class="last-numbers" id="lastNumbers"></div>
+          </div>
+
+          <div class="wheel-stage">
+            <canvas id="rouletteCanvas" width="620" height="620" aria-label="Roulette"></canvas>
+            <div class="wheel-pointer"></div>
+            <div class="wheel-core"></div>
+          </div>
+
+          <div class="round-status-board">
+            <div class="ticket-info">
+              <span>Manche en cours</span>
+              <strong id="roundLabel">--</strong>
+            </div>
+            <div class="ticket-info">
+              <span>Fin des mises</span>
+              <strong id="roundTimerValue">--:--</strong>
+            </div>
+            <div class="ticket-info">
+              <span>Etat</span>
+              <strong id="roundStatusValue">En attente</strong>
+            </div>
+            <div class="ticket-info">
+              <span>Ticket confirme</span>
+              <strong id="confirmedTicketValue">0 kamas</strong>
+            </div>
+          </div>
+
+          <div class="spin-controls">
+            <div class="ticket-info">
+              <span>Brouillon local</span>
+              <strong id="ticketTotal">0 kamas</strong>
+            </div>
+
+            <div class="spin-actions">
+              <button id="spinButton" class="primary-button">Valider le ticket</button>
+              <button id="clearBetsButton" class="ghost-button">Vider le brouillon</button>
+              <button id="cancelTicketButton" class="ghost-button">Annuler le ticket</button>
+            </div>
+
+            <div class="auto-spin-box">
+              <label>
+                <span>Auto inscription</span>
+                <input id="autoSpinRounds" type="number" min="1" max="25" value="5" />
+              </label>
+              <button id="autoSpinButton" class="secondary-button">Demarrer</button>
+              <button id="stopAutoSpinButton" class="ghost-button">Stop</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel bet-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Jetons</p>
+              <h3>Compose ton ticket</h3>
+            </div>
+          </div>
+
+          <div id="chipRow" class="chip-row"></div>
+
+          <div class="bet-shortcuts">
+            <button class="bet-shortcut red" data-bet-type="color" data-bet-value="red">Rouge</button>
+            <button class="bet-shortcut black" data-bet-type="color" data-bet-value="black">Noir</button>
+            <button class="bet-shortcut neutral" data-bet-type="parity" data-bet-value="even">Pair</button>
+            <button class="bet-shortcut neutral" data-bet-type="parity" data-bet-value="odd">Impair</button>
+            <button class="bet-shortcut neutral" data-bet-type="range" data-bet-value="manque">Manque 1-18</button>
+            <button class="bet-shortcut neutral" data-bet-type="range" data-bet-value="passe">Passe 19-36</button>
+            <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="1">1ere 12</button>
+            <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="2">2eme 12</button>
+            <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="3">3eme 12</button>
+          </div>
+
+          <div id="numberGrid" class="numbers-grid"></div>
+
+          <div class="ticket-layout">
+            <div>
+              <div class="section-title">Bets selectionnes</div>
+              <div id="betSlip" class="bet-slip"></div>
+            </div>
+            <div>
+              <div class="section-title">Probabilites</div>
+              <div id="probabilityCards" class="probability-grid"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel history-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Journal joueur</p>
+              <h3>Historique des mises</h3>
+            </div>
+          </div>
+          <div id="historyList" class="history-list"></div>
+        </section>
+
+        <section class="panel side-panel">
+          <div class="side-stack">
+            <article class="sub-panel">
+              <div class="section-title">Statistiques</div>
+              <div id="statsGrid" class="stats-grid"></div>
+            </article>
+
+            <article class="sub-panel">
+              <div class="section-title">Top gagnants</div>
+              <div id="leaderboardList" class="leaderboard-list"></div>
+            </article>
+
+            <article class="sub-panel">
+              <div class="section-title">Notifications</div>
+              <div id="notificationList" class="notification-list"></div>
+              <button id="readNotificationsButton" class="ghost-button full-width">
+                Tout marquer comme lu
+              </button>
+            </article>
+
+            <article class="sub-panel">
+              <div class="section-title">Chat de table</div>
+              <div id="chatMessages" class="chat-messages"></div>
+              <form id="chatForm" class="chat-form">
+                <input
+                  id="chatInput"
+                  type="text"
+                  maxlength="200"
+                  placeholder="Parie propre, parle propre."
+                  required
+                />
+                <button class="secondary-button" type="submit">Envoyer</button>
+              </form>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="resultModal" class="modal hidden">
+      <div class="modal-card">
+        <p class="eyebrow">Resultat de la manche</p>
+        <h3 id="resultTitle">Manche terminee</h3>
+        <p id="resultSubtitle" class="modal-copy"></p>
+        <div id="resultMeta" class="result-meta"></div>
+        <button id="closeResultModal" class="primary-button">Retour a la table</button>
+      </div>
+    </div>
+  </body>
+</html>

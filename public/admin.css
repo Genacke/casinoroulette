@@ -1,0 +1,78 @@
+.admin-auth-layout {
+  grid-template-columns: 1fr 0.8fr;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.user-admin-panel,
+.logs-panel,
+.winners-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-adjust-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.selected-player-card {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  min-height: 140px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 214, 144, 0.12);
+}
+
+.toolbar-form {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.adjust-form {
+  gap: 12px;
+}
+
+.admin-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.log-filter.active {
+  border-color: rgba(255, 214, 144, 0.4);
+  background: rgba(255, 214, 144, 0.14);
+  color: var(--gold);
+}
+
+.action-button {
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 214, 144, 0.12);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.action-button:hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 960px) {
+  .admin-auth-layout,
+  .admin-adjust-grid,
+  .admin-activity-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar-form {
+    grid-template-columns: 1fr;
+  }
+}
