@@ -1323,12 +1323,12 @@ function drawWheel(rotation = state.wheelRotation) {
 
   context.beginPath();
   context.arc(0, 0, radius + 16, 0, Math.PI * 2);
-  context.fillStyle = "#4b2b0f";
+  context.fillStyle = "#4e341c";
   context.fill();
 
   for (let index = 0; index < pocketCount; index += 1) {
     const number = state.bootstrap?.roulette?.wheelOrder?.[index] ?? defaultWheelOrder()[index];
-    const color = number === 0 ? "#11b87e" : RED_NUMBERS.has(number) ? "#d8304c" : "#121215";
+    const color = number === 0 ? "#5f8e41" : RED_NUMBERS.has(number) ? "#b64f35" : "#1f201d";
     const startAngle = -Math.PI / 2 + rotation + index * angleSize - angleSize / 2;
     const endAngle = startAngle + angleSize;
 
@@ -1339,7 +1339,7 @@ function drawWheel(rotation = state.wheelRotation) {
     context.fillStyle = color;
     context.fill();
 
-    context.strokeStyle = "rgba(255, 214, 144, 0.32)";
+    context.strokeStyle = "rgba(216, 181, 102, 0.3)";
     context.lineWidth = 2;
     context.stroke();
 
@@ -1347,8 +1347,8 @@ function drawWheel(rotation = state.wheelRotation) {
     context.rotate(startAngle + angleSize / 2);
     context.translate(0, -radius + 42);
     context.rotate(Math.PI / 2);
-    context.fillStyle = "#fff4df";
-    context.font = "700 20px Trebuchet MS";
+    context.fillStyle = "#fff2d1";
+    context.font = "700 20px Palatino Linotype";
     context.textAlign = "center";
     context.fillText(String(number), 0, 8);
     context.restore();
@@ -1356,10 +1356,10 @@ function drawWheel(rotation = state.wheelRotation) {
 
   context.beginPath();
   context.arc(0, 0, radius * 0.58, 0, Math.PI * 2);
-  context.fillStyle = "#2a1218";
+  context.fillStyle = "#24170d";
   context.fill();
   context.lineWidth = 8;
-  context.strokeStyle = "rgba(255, 214, 144, 0.55)";
+  context.strokeStyle = "rgba(216, 181, 102, 0.55)";
   context.stroke();
 
   context.restore();

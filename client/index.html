@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dofus Royale Roulette</title>
+    <title>La Roue des Kamas</title>
     <link rel="stylesheet" href="/public/styles.css" />
     <script defer src="/public/common.js"></script>
     <script defer src="/client/app.js"></script>
@@ -15,12 +15,12 @@
     <div class="page-shell">
       <header class="site-header">
         <div>
-          <p class="eyebrow">Serveur prive Dofus</p>
-          <h1>Dofus Royale Roulette</h1>
+          <p class="eyebrow">Monde des Douze</p>
+          <h1>La Roue des Kamas</h1>
         </div>
 
         <div class="header-actions">
-          <span class="status-pill">RNG serveur securise</span>
+          <span class="status-pill">Croupier du Monde des Douze</span>
           <button id="soundToggle" class="ghost-button">Son OFF</button>
           <a id="adminShortcut" class="ghost-button hidden" href="/admin">Panel admin</a>
           <button id="logoutButton" class="ghost-button hidden">Deconnexion</button>
@@ -29,22 +29,23 @@
 
       <section id="authGate" class="auth-layout">
         <article class="hero-card">
-          <p class="eyebrow">Casino moderne</p>
-          <h2>La roulette ou les kamas changent de camp, jamais la securite.</h2>
+          <p class="eyebrow">Taverne des Kamas</p>
+          <h2>Une table de roulette taillée pour les aventuriers du Monde des Douze.</h2>
           <p class="hero-copy">
             Les kamas sont remis IN GAME a un admin ou croupier, puis credites
-            manuellement via le panel securise. Le resultat de la roue est calcule
-            uniquement cote serveur.
+            manuellement via le panel securise. Chaque manche est tiree cote serveur
+            sous le regard du croupier, sans qu'aucun joueur ne puisse trafiquer son solde.
           </p>
 
           <div class="feature-list">
             <div class="feature-chip">Roulette 0-36</div>
             <div class="feature-chip">Rounds toutes les 2 min</div>
             <div class="feature-chip">Jackpot sur le 0</div>
+            <div class="feature-chip">Ambiance taverne fantasy</div>
             <div class="feature-chip">Leaderboard</div>
             <div class="feature-chip">Historique complet</div>
             <div class="feature-chip">Auto inscription</div>
-            <div class="feature-chip">Chat de table</div>
+            <div class="feature-chip">Chat de taverne</div>
           </div>
         </article>
 
@@ -108,8 +109,8 @@
         <section class="panel wheel-panel">
           <div class="panel-header">
             <div>
-              <p class="eyebrow">Table principale</p>
-              <h3>Roulette live</h3>
+              <p class="eyebrow">Grande table</p>
+              <h3>Roue des Douze</h3>
             </div>
             <div class="last-numbers" id="lastNumbers"></div>
           </div>
@@ -165,8 +166,8 @@
         <section class="panel bet-panel">
           <div class="panel-header">
             <div>
-              <p class="eyebrow">Jetons</p>
-              <h3>Compose ton ticket</h3>
+              <p class="eyebrow">Bourse de kamas</p>
+              <h3>Compose ton ticket d'aventurier</h3>
             </div>
           </div>
 
@@ -201,7 +202,7 @@
         <section class="panel history-panel">
           <div class="panel-header">
             <div>
-              <p class="eyebrow">Journal joueur</p>
+              <p class="eyebrow">Carnet de route</p>
               <h3>Historique des mises</h3>
             </div>
           </div>
@@ -254,7 +255,7 @@
             </article>
 
             <article class="sub-panel">
-              <div class="section-title">Notifications</div>
+              <div class="section-title">Messages du croupier</div>
               <div id="notificationList" class="notification-list"></div>
               <button id="readNotificationsButton" class="ghost-button full-width">
                 Tout marquer comme lu
@@ -262,7 +263,7 @@
             </article>
 
             <article class="sub-panel">
-              <div class="section-title">Chat de table</div>
+              <div class="section-title">Chat de taverne</div>
               <div id="chatMessages" class="chat-messages"></div>
               <form id="chatForm" class="chat-form">
                 <input
