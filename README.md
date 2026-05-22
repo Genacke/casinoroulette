@@ -15,6 +15,7 @@ Site de roulette style casino pour serveur prive Dofus, avec monnaie virtuelle e
 - Historique des tickets, gains, manches, connexions et ajustements
 - Jackpot sur le numero 0
 - Leaderboard, stats joueur, niveau, notifications, chat et auto inscription
+- Demandes de cash out joueur avec traitement admin
 - Rate limiting, anti-spam, hash des mots de passe, cookie JWT HttpOnly
 
 ## Fonctionnement metier
@@ -177,6 +178,8 @@ npm run dev
 - `DELETE /api/game/ticket`
 - `GET /api/game/history`
 - `GET /api/game/leaderboard`
+- `POST /api/game/cashout-requests`
+- `DELETE /api/game/cashout-requests/:requestId`
 - `GET /api/game/chat`
 - `POST /api/game/chat`
 - `GET /api/game/notifications`
@@ -186,8 +189,9 @@ npm run dev
 
 - `GET /api/admin/dashboard`
 - `GET /api/admin/users?search=...`
+- `POST /api/admin/cashout-requests/:requestId`
 - `POST /api/admin/users/:userId/balance`
-- `GET /api/admin/logs?type=spins|bets|balances|logins`
+- `GET /api/admin/logs?type=spins|bets|cashouts|balances|logins`
 
 ## Verification rapide
 

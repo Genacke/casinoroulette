@@ -8,11 +8,47 @@
   gap: 20px;
 }
 
+.admin-grid .metrics-panel {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .user-admin-panel,
 .logs-panel,
 .winners-panel {
   display: grid;
   gap: 18px;
+}
+
+.cashout-admin-list {
+  display: grid;
+  gap: 14px;
+}
+
+.cashout-admin-card {
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 214, 144, 0.12);
+  display: grid;
+  gap: 12px;
+}
+
+.cashout-admin-head,
+.cashout-status-head,
+.cashout-admin-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cashout-admin-actions {
+  flex-wrap: wrap;
+}
+
+.cashout-admin-note {
+  display: grid;
+  gap: 8px;
 }
 
 .admin-adjust-grid {
@@ -65,11 +101,61 @@
   transform: translateY(-1px);
 }
 
+.cashout-status-card,
+.cashout-requests-list {
+  margin-top: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 214, 144, 0.12);
+  background: rgba(10, 6, 8, 0.62);
+}
+
+.cashout-status-card {
+  padding: 16px;
+}
+
+.cashout-request-item {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cashout-request-item:last-child {
+  border-bottom: 0;
+}
+
+.cashout-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.status-pending {
+  background: rgba(255, 214, 144, 0.12);
+  color: var(--gold);
+}
+
+.status-completed {
+  background: rgba(17, 184, 126, 0.16);
+  color: #93ffd1;
+}
+
+.status-rejected,
+.status-cancelled {
+  background: rgba(224, 58, 79, 0.16);
+  color: #ffafbb;
+}
+
 @media (max-width: 960px) {
   .admin-auth-layout,
   .admin-adjust-grid,
   .admin-activity-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-grid .metrics-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .toolbar-form {

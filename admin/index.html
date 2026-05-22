@@ -31,7 +31,7 @@
           <h2>Credits manuels, retraits, logs et surveillance serveur.</h2>
           <p class="hero-copy">
             Toute modification de solde passe ici. Les joueurs ne peuvent jamais
-            s’auto-crediter ni manipuler le resultat de la roulette.
+            s'auto-crediter ni manipuler le resultat de la roulette.
           </p>
         </article>
 
@@ -67,6 +67,10 @@
           <div class="metric-card">
             <span>Jackpot</span>
             <strong id="adminJackpot">0 kamas</strong>
+          </div>
+          <div class="metric-card">
+            <span>Cash out en attente</span>
+            <strong id="adminPendingCashouts">0</strong>
           </div>
         </section>
 
@@ -118,6 +122,16 @@
         <section class="panel winners-panel">
           <div class="panel-header">
             <div>
+              <p class="eyebrow">Cash out</p>
+              <h3>Demandes en attente</h3>
+            </div>
+          </div>
+          <div id="pendingCashoutRequests" class="cashout-admin-list"></div>
+        </section>
+
+        <section class="panel winners-panel">
+          <div class="panel-header">
+            <div>
               <p class="eyebrow">Performance</p>
               <h3>Plus gros gagnants</h3>
             </div>
@@ -134,6 +148,7 @@
             <div class="log-filter-row">
               <button class="ghost-button log-filter active" data-log-type="spins">Spins</button>
               <button class="ghost-button log-filter" data-log-type="bets">Mises</button>
+              <button class="ghost-button log-filter" data-log-type="cashouts">Cash out</button>
               <button class="ghost-button log-filter" data-log-type="balances">Soldes</button>
               <button class="ghost-button log-filter" data-log-type="logins">Connexions</button>
             </div>

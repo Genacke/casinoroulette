@@ -213,6 +213,23 @@ async function initializeDatabase() {
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS cashout_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      username_snapshot TEXT NOT NULL,
+      amount INTEGER NOT NULL CHECK(amount > 0),
+      note TEXT,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK(status IN ('pending', 'completed', 'rejected', 'cancelled')),
+      admin_user_id INTEGER,
+      admin_note TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      processed_at TEXT,
+      cancelled_at TEXT,
+      FOREIGN KEY(user_id) REFERENCES users(id),
+      FOREIGN KEY(admin_user_id) REFERENCES users(id)
+    );
+
     CREATE TABLE IF NOT EXISTS roulette_rounds (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       round_key INTEGER NOT NULL UNIQUE,
@@ -253,6 +270,13 @@ async function initializeDatabase() {
       ON bets (user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_balance_logs_user_created_at
       ON balance_logs (user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_cashout_requests_user_created_at
+      ON cashout_requests (user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_cashout_requests_status_created_at
+      ON cashout_requests (status, created_at DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_cashout_requests_user_pending
+      ON cashout_requests (user_id)
+      WHERE status = 'pending';
     CREATE INDEX IF NOT EXISTS idx_login_logs_created_at
       ON login_logs (created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_rounds_status_key

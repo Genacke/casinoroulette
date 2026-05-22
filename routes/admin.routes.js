@@ -103,8 +103,62 @@ async function getRecentBetLogs(limit = 20) {
   );
 }
 
+async function getPendingCashoutRequests(limit = 20) {
+  return all(
+    `
+      SELECT
+        cashout_requests.id,
+        cashout_requests.user_id AS userId,
+        cashout_requests.username_snapshot AS username,
+        cashout_requests.amount,
+        cashout_requests.note,
+        cashout_requests.status,
+        cashout_requests.created_at AS createdAt,
+        users.balance AS currentBalance
+      FROM cashout_requests
+      INNER JOIN users ON users.id = cashout_requests.user_id
+      WHERE cashout_requests.status = 'pending'
+      ORDER BY cashout_requests.id DESC
+      LIMIT ?
+    `,
+    [limit],
+  );
+}
+
+async function getRecentCashoutLogs(limit = 20) {
+  return all(
+    `
+      SELECT
+        cashout_requests.id,
+        cashout_requests.username_snapshot AS username,
+        cashout_requests.amount,
+        cashout_requests.note,
+        cashout_requests.status,
+        cashout_requests.admin_note AS adminNote,
+        admin.username AS adminUsername,
+        cashout_requests.created_at AS createdAt,
+        cashout_requests.processed_at AS processedAt,
+        cashout_requests.cancelled_at AS cancelledAt
+      FROM cashout_requests
+      LEFT JOIN users AS admin ON admin.id = cashout_requests.admin_user_id
+      ORDER BY cashout_requests.id DESC
+      LIMIT ?
+    `,
+    [limit],
+  );
+}
+
 async function getDashboardPayload() {
-  const [summary, jackpotPool, recentLogins, recentBalances, recentSpins, recentBets] =
+  const [
+    summary,
+    jackpotPool,
+    recentLogins,
+    recentBalances,
+    recentSpins,
+    recentBets,
+    pendingCashoutRequests,
+    recentCashoutRequests,
+  ] =
     await Promise.all([
       get(
         `
@@ -121,6 +175,8 @@ async function getDashboardPayload() {
       getRecentBalanceLogs(),
       getRecentSpinLogs(),
       getRecentBetLogs(),
+      getPendingCashoutRequests(),
+      getRecentCashoutLogs(12),
     ]);
 
   const [spinCountRow, winningPlayers] = await Promise.all([
@@ -148,12 +204,15 @@ async function getDashboardPayload() {
       totalWon: Number(summary?.totalWon || 0),
       totalSpins: Number(spinCountRow?.totalSpins || 0),
       jackpotPool: Number(jackpotPool || config.initialJackpotPool),
+      pendingCashoutCount: pendingCashoutRequests.length,
     },
     winningPlayers,
     recentLogins,
     recentBalances,
     recentSpins,
     recentBets,
+    pendingCashoutRequests,
+    recentCashoutRequests,
   };
 }
 
@@ -201,6 +260,147 @@ router.get(
     res.json({
       success: true,
       users,
+    });
+  }),
+);
+
+router.post(
+  "/cashout-requests/:requestId",
+  requireAdmin,
+  adminLimiter,
+  asyncHandler(async (req, res) => {
+    const requestId = Number.parseInt(req.params.requestId, 10);
+    const action = String(req.body?.action || "").trim().toLowerCase();
+    const adminNote = String(req.body?.adminNote || "").trim().slice(0, 180);
+
+    if (!Number.isInteger(requestId)) {
+      res.status(400).json({
+        success: false,
+        message: "Identifiant de cash out invalide.",
+      });
+      return;
+    }
+
+    if (!["complete", "reject"].includes(action)) {
+      res.status(400).json({
+        success: false,
+        message: "Action de cash out invalide.",
+      });
+      return;
+    }
+
+    const outcome = await withTransaction(async () => {
+      const request = await get(
+        `
+          SELECT *
+          FROM cashout_requests
+          WHERE id = ?
+            AND status = 'pending'
+        `,
+        [requestId],
+      );
+
+      if (!request) {
+        throw new Error("Demande de cash out introuvable ou deja traitee.");
+      }
+
+      const targetUser = await get("SELECT * FROM users WHERE id = ?", [request.user_id]);
+      if (!targetUser) {
+        throw new Error("Joueur introuvable.");
+      }
+
+      if (action === "complete") {
+        const balanceBefore = Number(targetUser.balance);
+        const balanceAfter = balanceBefore - Number(request.amount);
+
+        if (balanceAfter < 0) {
+          throw new Error("Le solde actuel du joueur est insuffisant pour ce cash out.");
+        }
+
+        await run("UPDATE users SET balance = ? WHERE id = ?", [balanceAfter, targetUser.id]);
+
+        await run(
+          `
+            INSERT INTO balance_logs (
+              user_id,
+              admin_user_id,
+              type,
+              amount,
+              balance_before,
+              balance_after,
+              note
+            )
+            VALUES (?, ?, 'cashout', ?, ?, ?, ?)
+          `,
+          [
+            targetUser.id,
+            req.user.id,
+            -Number(request.amount),
+            balanceBefore,
+            balanceAfter,
+            adminNote || `Cash out #${request.id}`,
+          ],
+        );
+
+        await run(
+          `
+            UPDATE cashout_requests
+            SET status = 'completed',
+                admin_user_id = ?,
+                admin_note = ?,
+                processed_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `,
+          [req.user.id, adminNote || null, request.id],
+        );
+
+        await run(
+          `
+            INSERT INTO notifications (user_id, type, message)
+            VALUES (?, 'cashout', ?)
+          `,
+          [
+            targetUser.id,
+            `Ta demande de cash out de ${Number(request.amount).toLocaleString("fr-FR")} kamas a ete validee.`,
+          ],
+        );
+      } else {
+        await run(
+          `
+            UPDATE cashout_requests
+            SET status = 'rejected',
+                admin_user_id = ?,
+                admin_note = ?,
+                processed_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `,
+          [req.user.id, adminNote || null, request.id],
+        );
+
+        await run(
+          `
+            INSERT INTO notifications (user_id, type, message)
+            VALUES (?, 'warning', ?)
+          `,
+          [
+            targetUser.id,
+            adminNote
+              ? `Ta demande de cash out a ete refusee: ${adminNote}`
+              : "Ta demande de cash out a ete refusee par le staff.",
+          ],
+        );
+      }
+
+      return {
+        user: await get("SELECT * FROM users WHERE id = ?", [targetUser.id]),
+      };
+    });
+
+    res.json({
+      success: true,
+      message: action === "complete" ? "Cash out valide et debite." : "Cash out refuse.",
+      user: serializeUser(outcome.user),
+      dashboard: await getDashboardPayload(),
     });
   }),
 );
@@ -346,6 +546,15 @@ router.get(
         success: true,
         type,
         rows: await getRecentBetLogs(limit),
+      });
+      return;
+    }
+
+    if (type === "cashouts") {
+      res.json({
+        success: true,
+        type,
+        rows: await getRecentCashoutLogs(limit),
       });
       return;
     }

@@ -1,7 +1,7 @@
 const express = require("express");
 const { serializeUser } = require("../server/auth");
 const { config } = require("../server/config");
-const { all, get, getSetting, run } = require("../server/db");
+const { all, get, getSetting, run, withTransaction } = require("../server/db");
 const {
   asyncHandler,
   chatCooldown,
@@ -17,7 +17,7 @@ const {
   getRecentRoundNumbers,
   setPlayerTicket,
 } = require("../server/rounds");
-const { normalizeMessage } = require("../server/utils");
+const { normalizeMessage, parsePositiveInteger } = require("../server/utils");
 
 const router = express.Router();
 
@@ -141,8 +141,45 @@ async function getNotifications(userId) {
   );
 }
 
+function mapCashoutRequest(row) {
+  return {
+    id: Number(row.id),
+    amount: Number(row.amount),
+    note: row.note || "",
+    status: row.status,
+    adminNote: row.adminNote || "",
+    createdAt: row.createdAt,
+    processedAt: row.processedAt || null,
+    cancelledAt: row.cancelledAt || null,
+    canCancel: row.status === "pending",
+  };
+}
+
+async function getCashoutRequests(userId, limit = 8) {
+  const rows = await all(
+    `
+      SELECT
+        id,
+        amount,
+        note,
+        status,
+        admin_note AS adminNote,
+        created_at AS createdAt,
+        processed_at AS processedAt,
+        cancelled_at AS cancelledAt
+      FROM cashout_requests
+      WHERE user_id = ?
+      ORDER BY id DESC
+      LIMIT ?
+    `,
+    [userId, limit],
+  );
+
+  return rows.map(mapCashoutRequest);
+}
+
 async function getPlayerBootstrap(userId) {
-  const [roundState, stats, history, leaderboard, chat, notifications] =
+  const [roundState, stats, history, leaderboard, chat, notifications, cashoutRequests] =
     await Promise.all([
       buildRoundState(userId),
       getPlayerStats(userId),
@@ -150,6 +187,7 @@ async function getPlayerBootstrap(userId) {
       getLeaderboard(),
       getChatMessages(),
       getNotifications(userId),
+      getCashoutRequests(userId),
     ]);
 
   return {
@@ -160,6 +198,9 @@ async function getPlayerBootstrap(userId) {
     leaderboard,
     chat,
     notifications,
+    cashoutRequests,
+    pendingCashoutRequest:
+      cashoutRequests.find((request) => request.status === "pending") || null,
     jackpotPool: roundState.jackpotPool,
     currentRound: roundState.currentRound,
     pendingTicket: roundState.pendingTicket,
@@ -197,6 +238,7 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const roundState = await buildRoundState(req.user.id);
+    const cashoutRequests = await getCashoutRequests(req.user.id);
 
     res.json({
       success: true,
@@ -208,6 +250,9 @@ router.get(
       jackpotPool: roundState.jackpotPool,
       lastNumbers: roundState.lastNumbers,
       serverTime: roundState.serverTime,
+      cashoutRequests,
+      pendingCashoutRequest:
+        cashoutRequests.find((request) => request.status === "pending") || null,
     });
   }),
 );
@@ -302,6 +347,78 @@ router.post(
 );
 
 router.post(
+  "/cashout-requests",
+  requireAuth,
+  spinLimiter,
+  spinCooldown,
+  asyncHandler(async (req, res) => {
+    const amount = parsePositiveInteger(req.body?.amount);
+    const note = String(req.body?.note || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .slice(0, 180);
+
+    if (!amount) {
+      res.status(400).json({
+        success: false,
+        message: "Montant de cash out invalide.",
+      });
+      return;
+    }
+
+    const requestState = await requireCashoutRequestCreation(req.user.id, amount, note);
+    const [notifications, cashoutRequests] = await Promise.all([
+      getNotifications(req.user.id),
+      getCashoutRequests(req.user.id),
+    ]);
+
+    res.status(201).json({
+      success: true,
+      message: "Demande de cash out envoyee au staff.",
+      user: serializeUser(requestState.user),
+      notifications,
+      cashoutRequests,
+      pendingCashoutRequest:
+        cashoutRequests.find((request) => request.status === "pending") || null,
+    });
+  }),
+);
+
+router.delete(
+  "/cashout-requests/:requestId",
+  requireAuth,
+  spinLimiter,
+  spinCooldown,
+  asyncHandler(async (req, res) => {
+    const requestId = Number.parseInt(req.params.requestId, 10);
+
+    if (!Number.isInteger(requestId)) {
+      res.status(400).json({
+        success: false,
+        message: "Identifiant de demande invalide.",
+      });
+      return;
+    }
+
+    const requestState = await cancelCashoutRequest(req.user.id, requestId);
+    const [notifications, cashoutRequests] = await Promise.all([
+      getNotifications(req.user.id),
+      getCashoutRequests(req.user.id),
+    ]);
+
+    res.json({
+      success: true,
+      message: "Demande de cash out annulee.",
+      user: serializeUser(requestState.user),
+      notifications,
+      cashoutRequests,
+      pendingCashoutRequest:
+        cashoutRequests.find((request) => request.status === "pending") || null,
+    });
+  }),
+);
+
+router.post(
   "/ticket",
   requireAuth,
   spinLimiter,
@@ -383,5 +500,119 @@ router.delete(
     });
   }),
 );
+
+async function requireCashoutRequestCreation(userId, amount, note) {
+  return requireCashoutMutation(async () => {
+    const user = await get("SELECT * FROM users WHERE id = ?", [userId]);
+
+    if (!user) {
+      throw new Error("Compte introuvable.");
+    }
+
+    if (Number(user.balance) < amount) {
+      throw new Error("Solde insuffisant pour cette demande de cash out.");
+    }
+
+    const existingPending = await get(
+      `
+        SELECT id
+        FROM cashout_requests
+        WHERE user_id = ?
+          AND status = 'pending'
+        LIMIT 1
+      `,
+      [userId],
+    );
+
+    if (existingPending) {
+      throw new Error("Une demande de cash out est deja en attente.");
+    }
+
+    await run(
+      `
+        INSERT INTO cashout_requests (
+          user_id,
+          username_snapshot,
+          amount,
+          note,
+          status
+        )
+        VALUES (?, ?, ?, ?, 'pending')
+      `,
+      [userId, user.username, amount, note || null],
+    );
+
+    await run(
+      `
+        INSERT INTO notifications (user_id, type, message)
+        VALUES (?, 'cashout', ?)
+      `,
+      [
+        userId,
+        `Demande de cash out envoyee pour ${amount.toLocaleString("fr-FR")} kamas.`,
+      ],
+    );
+
+    return {
+      user: await get("SELECT * FROM users WHERE id = ?", [userId]),
+    };
+  });
+}
+
+async function cancelCashoutRequest(userId, requestId) {
+  return requireCashoutMutation(async () => {
+    const request = await get(
+      `
+        SELECT *
+        FROM cashout_requests
+        WHERE id = ?
+          AND user_id = ?
+      `,
+      [requestId, userId],
+    );
+
+    if (!request) {
+      throw new Error("Demande de cash out introuvable.");
+    }
+
+    if (request.status !== "pending") {
+      throw new Error("Seule une demande en attente peut etre annulee.");
+    }
+
+    await run(
+      `
+        UPDATE cashout_requests
+        SET status = 'cancelled',
+            cancelled_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `,
+      [requestId],
+    );
+
+    await run(
+      `
+        INSERT INTO notifications (user_id, type, message)
+        VALUES (?, 'info', ?)
+      `,
+      [userId, "Ta demande de cash out a ete annulee."],
+    );
+
+    return {
+      user: await get("SELECT * FROM users WHERE id = ?", [userId]),
+    };
+  });
+}
+
+async function requireCashoutMutation(callback) {
+  try {
+    return await withTransaction(callback);
+  } catch (error) {
+    if (/idx_cashout_requests_user_pending/i.test(error.message || "")) {
+      throw new Error("Une demande de cash out est deja en attente.");
+    }
+
+    throw error;
+  }
+}
 
 module.exports = router;

@@ -25,10 +25,12 @@ function cacheElements() {
     adminJackpot: document.getElementById("adminJackpot"),
     adminLoginForm: document.getElementById("adminLoginForm"),
     adminLogoutButton: document.getElementById("adminLogoutButton"),
+    adminPendingCashouts: document.getElementById("adminPendingCashouts"),
     adminPlayerCount: document.getElementById("adminPlayerCount"),
     adminTotalWagered: document.getElementById("adminTotalWagered"),
     balanceAdjustForm: document.getElementById("balanceAdjustForm"),
     logsTable: document.getElementById("logsTable"),
+    pendingCashoutRequests: document.getElementById("pendingCashoutRequests"),
     playerResults: document.getElementById("playerResults"),
     playerSearchForm: document.getElementById("playerSearchForm"),
     playerSearchInput: document.getElementById("playerSearchInput"),
@@ -48,6 +50,7 @@ function bindEvents() {
     searchPlayers(elements.playerSearchInput.value.trim());
   });
   elements.balanceAdjustForm.addEventListener("submit", onBalanceAdjust);
+  elements.pendingCashoutRequests.addEventListener("click", onPendingCashoutAction);
 
   document.querySelectorAll(".log-filter").forEach((button) => {
     button.addEventListener("click", () => {
@@ -179,7 +182,9 @@ function renderDashboard() {
   elements.adminBalancePool.textContent = formatKamas(summary.playerBalance);
   elements.adminTotalWagered.textContent = formatKamas(summary.totalWagered);
   elements.adminJackpot.textContent = formatKamas(summary.jackpotPool);
+  elements.adminPendingCashouts.textContent = String(summary.pendingCashoutCount || 0);
 
+  renderPendingCashoutRequests(state.dashboard.pendingCashoutRequests);
   renderWinningPlayers(state.dashboard.winningPlayers);
   renderMiniLogs(elements.recentLogins, state.dashboard.recentLogins, renderLoginLine);
   renderMiniLogs(elements.recentBalances, state.dashboard.recentBalances, renderBalanceLine);
@@ -202,6 +207,64 @@ function renderWinningPlayers(players) {
           </div>
           <span>${formatKamas(player.balance)}</span>
         </div>
+      `,
+    )
+      .join("");
+}
+
+function renderPendingCashoutRequests(requests) {
+  if (!requests?.length) {
+    elements.pendingCashoutRequests.innerHTML = `
+      <div class="empty-state">Aucune demande de cash out en attente.</div>
+    `;
+    return;
+  }
+
+  elements.pendingCashoutRequests.innerHTML = requests
+    .map(
+      (request) => `
+        <article class="cashout-admin-card">
+          <div class="cashout-admin-head">
+            <div>
+              <strong>${escapeHtml(request.username)}</strong>
+              <div class="bet-meta">Demande le ${formatDate(request.createdAt)}</div>
+            </div>
+            <span class="status-pill">${formatKamas(request.amount)}</span>
+          </div>
+          <div class="bet-meta">Solde actuel: ${formatKamas(request.currentBalance)}</div>
+          ${
+            request.note
+              ? `<div class="bet-meta">Note joueur: ${escapeHtml(request.note)}</div>`
+              : ""
+          }
+          <label class="cashout-admin-note">
+            <span>Note admin</span>
+            <input
+              type="text"
+              maxlength="180"
+              placeholder="Ex: donne en jeu ce soir"
+              data-admin-note="${request.id}"
+            />
+          </label>
+          <div class="cashout-admin-actions">
+            <button
+              class="secondary-button"
+              data-cashout-action="complete"
+              data-request-id="${request.id}"
+              type="button"
+            >
+              Valider et debiter
+            </button>
+            <button
+              class="ghost-button"
+              data-cashout-action="reject"
+              data-request-id="${request.id}"
+              type="button"
+            >
+              Refuser
+            </button>
+          </div>
+        </article>
       `,
     )
     .join("");
@@ -296,6 +359,43 @@ async function onBalanceAdjust(event) {
     renderSelectedPlayer();
     await loadLogs();
     event.currentTarget.reset();
+  } catch (error) {
+    showToast(error.message, "error");
+  }
+}
+
+async function onPendingCashoutAction(event) {
+  const actionButton = event.target.closest("[data-cashout-action]");
+  if (!actionButton) {
+    return;
+  }
+
+  const requestId = Number(actionButton.dataset.requestId);
+  const action = actionButton.dataset.cashoutAction;
+  const noteInput = elements.pendingCashoutRequests.querySelector(
+    `[data-admin-note="${requestId}"]`,
+  );
+  const adminNote = noteInput?.value.trim() || "";
+
+  try {
+    const payload = await api(`/api/admin/cashout-requests/${requestId}`, {
+      method: "POST",
+      body: JSON.stringify({
+        action,
+        adminNote,
+      }),
+    });
+
+    showToast(payload.message, "success");
+    state.dashboard = payload.dashboard;
+    renderDashboard();
+    await searchPlayers(elements.playerSearchInput.value.trim());
+    if (state.selectedUser) {
+      state.selectedUser =
+        state.users.find((user) => user.id === state.selectedUser.id) || state.selectedUser;
+      renderSelectedPlayer();
+    }
+    await loadLogs();
   } catch (error) {
     showToast(error.message, "error");
   }
@@ -410,6 +510,44 @@ function renderLogs(type, rows) {
                   <td>${formatKamas(row.totalReturn)}</td>
                   <td>${row.resultNumber}</td>
                   <td>${formatDate(row.createdAt)}</td>
+                </tr>
+              `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
+    return;
+  }
+
+  if (type === "cashouts") {
+    elements.logsTable.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Joueur</th>
+            <th>Montant</th>
+            <th>Statut</th>
+            <th>Note joueur</th>
+            <th>Note admin</th>
+            <th>Admin</th>
+            <th>Demande</th>
+            <th>Traitement</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map(
+              (row) => `
+                <tr>
+                  <td>${escapeHtml(row.username)}</td>
+                  <td>${formatKamas(row.amount)}</td>
+                  <td>${escapeHtml(row.status)}</td>
+                  <td>${escapeHtml(row.note || "-")}</td>
+                  <td>${escapeHtml(row.adminNote || "-")}</td>
+                  <td>${escapeHtml(row.adminUsername || "-")}</td>
+                  <td>${formatDate(row.createdAt)}</td>
+                  <td>${formatDate(row.processedAt || row.cancelledAt)}</td>
                 </tr>
               `,
             )

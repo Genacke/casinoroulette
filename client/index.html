@@ -216,6 +216,39 @@
             </article>
 
             <article class="sub-panel">
+              <div class="section-title">Demande de cash out</div>
+              <form id="cashoutRequestForm" class="cashout-form">
+                <label>
+                  <span>Montant</span>
+                  <input
+                    id="cashoutAmount"
+                    name="amount"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="Montant en kamas"
+                    required
+                  />
+                </label>
+                <label>
+                  <span>Note optionnelle</span>
+                  <input
+                    id="cashoutNote"
+                    name="note"
+                    type="text"
+                    maxlength="180"
+                    placeholder="Ex: dispo ce soir vers 21h"
+                  />
+                </label>
+                <button id="cashoutSubmitButton" class="secondary-button" type="submit">
+                  Demande de cash out
+                </button>
+              </form>
+              <div id="pendingCashoutCard" class="cashout-status-card hidden"></div>
+              <div id="cashoutRequestsList" class="cashout-requests-list"></div>
+            </article>
+
+            <article class="sub-panel">
               <div class="section-title">Top gagnants</div>
               <div id="leaderboardList" class="leaderboard-list"></div>
             </article>

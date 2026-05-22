@@ -45,6 +45,9 @@ const state = {
   roundPollTimer: null,
   countdownTimer: null,
   lastAnimatedRoundId: null,
+  cashoutRequests: [],
+  pendingCashoutRequest: null,
+  isSubmittingCashout: false,
 };
 
 const elements = {};
@@ -69,6 +72,11 @@ function cacheElements() {
     betPanel: document.querySelector(".bet-panel"),
     betSlip: document.getElementById("betSlip"),
     cancelTicketButton: document.getElementById("cancelTicketButton"),
+    cashoutAmount: document.getElementById("cashoutAmount"),
+    cashoutNote: document.getElementById("cashoutNote"),
+    cashoutRequestForm: document.getElementById("cashoutRequestForm"),
+    cashoutRequestsList: document.getElementById("cashoutRequestsList"),
+    cashoutSubmitButton: document.getElementById("cashoutSubmitButton"),
     chatForm: document.getElementById("chatForm"),
     chatInput: document.getElementById("chatInput"),
     chatMessages: document.getElementById("chatMessages"),
@@ -103,6 +111,7 @@ function cacheElements() {
     statsGrid: document.getElementById("statsGrid"),
     stopAutoSpinButton: document.getElementById("stopAutoSpinButton"),
     ticketTotal: document.getElementById("ticketTotal"),
+    pendingCashoutCard: document.getElementById("pendingCashoutCard"),
   });
 }
 
@@ -117,6 +126,7 @@ function bindEvents() {
   elements.soundToggle.addEventListener("click", toggleSound);
   elements.clearBetsButton.addEventListener("click", clearBets);
   elements.cancelTicketButton.addEventListener("click", cancelTicket);
+  elements.cashoutRequestForm.addEventListener("submit", onCashoutRequest);
   elements.spinButton.addEventListener("click", submitCurrentTicket);
   elements.autoSpinButton.addEventListener("click", startAutoQueue);
   elements.stopAutoSpinButton.addEventListener("click", stopAutoQueue);
@@ -125,6 +135,11 @@ function bindEvents() {
   });
   elements.chatForm.addEventListener("submit", onChatSubmit);
   elements.readNotificationsButton.addEventListener("click", readAllNotifications);
+  elements.pendingCashoutCard.addEventListener("click", (event) => {
+    if (event.target.closest("[data-cancel-cashout]")) {
+      cancelPendingCashoutRequest();
+    }
+  });
 
   elements.betPanel.addEventListener("click", (event) => {
     const shortcut = event.target.closest("[data-bet-type]");
@@ -171,6 +186,11 @@ function applyBootstrap(payload, options = {}) {
   state.bootstrap = payload;
   state.me = payload.user;
   state.pendingTicket = payload.pendingTicket || emptyPendingTicket(payload.currentRound?.id);
+  state.cashoutRequests = payload.cashoutRequests || [];
+  state.pendingCashoutRequest =
+    payload.pendingCashoutRequest ||
+    state.cashoutRequests.find((request) => request.status === "pending") ||
+    null;
 
   if (state.lastAnimatedRoundId === null) {
     state.lastAnimatedRoundId = payload.latestResolvedRound?.id || 0;
@@ -188,6 +208,7 @@ function applyBootstrap(payload, options = {}) {
   renderNotifications(payload.notifications);
   renderStats(payload.stats);
   renderChat(payload.chat);
+  renderCashoutSection();
   renderProbabilityCards(payload.roulette?.probabilities || DEFAULT_PROBABILITIES);
   syncAdminShortcut();
   renderBetSlip();
@@ -285,7 +306,12 @@ async function logout() {
   state.pendingTicket = emptyPendingTicket(null);
   state.betSlip.clear();
   state.lastAnimatedRoundId = null;
+  state.cashoutRequests = [];
+  state.pendingCashoutRequest = null;
+  state.isSubmittingCashout = false;
+  elements.cashoutRequestForm.reset();
   renderBetSlip();
+  renderCashoutSection();
   showAuth();
 }
 
@@ -401,6 +427,14 @@ function emptyPendingTicket(roundId) {
   };
 }
 
+function getPendingCashoutRequest() {
+  return (
+    state.pendingCashoutRequest ||
+    state.cashoutRequests.find((request) => request.status === "pending") ||
+    null
+  );
+}
+
 function replaceBetSlip(bets) {
   state.betSlip.clear();
   for (const bet of bets) {
@@ -473,6 +507,111 @@ function renderBetSlip() {
       `;
     })
     .join("");
+}
+
+function formatCashoutStatus(status) {
+  if (status === "completed") {
+    return "Validee";
+  }
+
+  if (status === "rejected") {
+    return "Refusee";
+  }
+
+  if (status === "cancelled") {
+    return "Annulee";
+  }
+
+  return "En attente";
+}
+
+function renderCashoutSection() {
+  const pendingRequest = getPendingCashoutRequest();
+  elements.cashoutAmount.max = String(Math.max(0, state.me?.balance || 0));
+
+  if (pendingRequest) {
+    elements.pendingCashoutCard.classList.remove("hidden");
+    elements.pendingCashoutCard.innerHTML = `
+      <div class="cashout-status-head">
+        <strong>Demande en attente</strong>
+        <span class="status-pill">${formatKamas(pendingRequest.amount)}</span>
+      </div>
+      <div class="bet-meta">Envoyee le ${formatDate(pendingRequest.createdAt)}</div>
+      ${
+        pendingRequest.note
+          ? `<div class="bet-meta">Note: ${escapeHtml(pendingRequest.note)}</div>`
+          : ""
+      }
+      <button class="ghost-button full-width" data-cancel-cashout type="button">
+        Annuler la demande
+      </button>
+    `;
+  } else {
+    elements.pendingCashoutCard.classList.add("hidden");
+    elements.pendingCashoutCard.innerHTML = "";
+  }
+
+  if (!state.cashoutRequests.length) {
+    elements.cashoutRequestsList.innerHTML = `
+      <div class="empty-state">Aucune demande de cash out pour l'instant.</div>
+    `;
+  } else {
+    elements.cashoutRequestsList.innerHTML = state.cashoutRequests
+      .map(
+        (request) => `
+          <div class="cashout-request-item">
+            <div class="cashout-status-head">
+              <strong>${formatKamas(request.amount)}</strong>
+              <span class="cashout-status status-${escapeHtml(request.status)}">
+                ${escapeHtml(formatCashoutStatus(request.status))}
+              </span>
+            </div>
+            <div class="bet-meta">Demande: ${formatDate(request.createdAt)}</div>
+            ${
+              request.processedAt
+                ? `<div class="bet-meta">Traitee: ${formatDate(request.processedAt)}</div>`
+                : ""
+            }
+            ${
+              request.cancelledAt
+                ? `<div class="bet-meta">Annulee: ${formatDate(request.cancelledAt)}</div>`
+                : ""
+            }
+            ${
+              request.note
+                ? `<div class="bet-meta">Note joueur: ${escapeHtml(request.note)}</div>`
+                : ""
+            }
+            ${
+              request.adminNote
+                ? `<div class="bet-meta">Retour staff: ${escapeHtml(request.adminNote)}</div>`
+                : ""
+            }
+          </div>
+        `,
+      )
+      .join("");
+  }
+
+  updateCashoutControls();
+}
+
+function updateCashoutControls() {
+  const pendingRequest = getPendingCashoutRequest();
+  const shouldDisableForm =
+    !state.me ||
+    Boolean(pendingRequest) ||
+    state.isSubmittingCashout ||
+    state.isSubmittingTicket ||
+    state.isAnimatingRound;
+
+  elements.cashoutAmount.disabled = shouldDisableForm;
+  elements.cashoutNote.disabled = shouldDisableForm;
+  elements.cashoutSubmitButton.disabled =
+    shouldDisableForm || Number(state.me?.balance || 0) <= 0;
+  elements.cashoutSubmitButton.textContent = pendingRequest
+    ? "Cash out en attente"
+    : "Demande de cash out";
 }
 
 function renderMetrics() {
@@ -680,6 +819,7 @@ function updateSpinButtons() {
   elements.autoSpinButton.textContent = state.autoQueue.active
     ? `Auto (${state.autoQueue.remaining})`
     : "Demarrer";
+  updateCashoutControls();
 }
 
 async function submitCurrentTicket() {
@@ -855,6 +995,93 @@ async function maybeSubmitAutoTicket() {
   }
 }
 
+async function onCashoutRequest(event) {
+  event.preventDefault();
+
+  if (state.isSubmittingCashout) {
+    return;
+  }
+
+  const formData = new FormData(event.currentTarget);
+  const amount = Number.parseInt(String(formData.get("amount") || ""), 10);
+  const note = String(formData.get("note") || "").trim();
+
+  if (!Number.isInteger(amount) || amount <= 0) {
+    showToast("Entre un montant valide pour le cash out.", "error");
+    return;
+  }
+
+  state.isSubmittingCashout = true;
+  updateCashoutControls();
+
+  try {
+    const payload = await api("/api/game/cashout-requests", {
+      method: "POST",
+      body: JSON.stringify({ amount, note }),
+    });
+
+    state.me = payload.user;
+    state.cashoutRequests = payload.cashoutRequests || [];
+    state.pendingCashoutRequest =
+      payload.pendingCashoutRequest ||
+      state.cashoutRequests.find((request) => request.status === "pending") ||
+      null;
+    state.bootstrap = {
+      ...state.bootstrap,
+      notifications: payload.notifications || state.bootstrap?.notifications || [],
+    };
+
+    renderMetrics();
+    renderNotifications(payload.notifications || []);
+    renderCashoutSection();
+    event.currentTarget.reset();
+    showToast(payload.message, "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.isSubmittingCashout = false;
+    updateCashoutControls();
+  }
+}
+
+async function cancelPendingCashoutRequest() {
+  const pendingRequest = getPendingCashoutRequest();
+
+  if (!pendingRequest || state.isSubmittingCashout) {
+    return;
+  }
+
+  state.isSubmittingCashout = true;
+  updateCashoutControls();
+
+  try {
+    const payload = await api(`/api/game/cashout-requests/${pendingRequest.id}`, {
+      method: "DELETE",
+    });
+
+    state.me = payload.user;
+    state.cashoutRequests = payload.cashoutRequests || [];
+    state.pendingCashoutRequest =
+      payload.pendingCashoutRequest ||
+      state.cashoutRequests.find((request) => request.status === "pending") ||
+      null;
+    state.bootstrap = {
+      ...state.bootstrap,
+      notifications: payload.notifications || state.bootstrap?.notifications || [],
+    };
+
+    renderMetrics();
+    renderNotifications(payload.notifications || []);
+    renderCashoutSection();
+    showToast(payload.message, "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.isSubmittingCashout = false;
+    updateCashoutControls();
+  }
+}
+
 async function onChatSubmit(event) {
   event.preventDefault();
   const message = elements.chatInput.value.trim();
@@ -975,6 +1202,11 @@ async function pollRoundState() {
 async function handleRoundState(payload) {
   state.me = payload.user;
   state.pendingTicket = payload.pendingTicket || emptyPendingTicket(payload.currentRound?.id);
+  state.cashoutRequests = payload.cashoutRequests || state.cashoutRequests;
+  state.pendingCashoutRequest =
+    payload.pendingCashoutRequest ||
+    state.cashoutRequests.find((request) => request.status === "pending") ||
+    null;
   state.bootstrap = {
     ...state.bootstrap,
     currentRound: payload.currentRound,
@@ -984,11 +1216,13 @@ async function handleRoundState(payload) {
     jackpotPool: payload.jackpotPool,
     lastNumbers: payload.lastNumbers,
     serverTime: payload.serverTime,
+    cashoutRequests: state.cashoutRequests,
   };
 
   renderMetrics();
   renderRoundPanel();
   renderLastNumbers(payload.lastNumbers);
+  renderCashoutSection();
   updateSpinButtons();
 
   if (
