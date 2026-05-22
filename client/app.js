@@ -11,19 +11,19 @@ const RED_NUMBERS = new Set([
   1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36,
 ]);
 
-const CHIP_VALUES = [100, 500, 1000, 5000, 10000];
+const CHIP_VALUES = [100000, 250000, 500000, 1000000, 2500000];
 const DEFAULT_PROBABILITIES = [
   { type: "number", label: "Numero exact", probability: 2.7, totalReturnMultiplier: 36.26 },
-  { type: "color", label: "Couleur", probability: 48.65, totalReturnMultiplier: 2.01 },
-  { type: "parity", label: "Pair / impair", probability: 48.65, totalReturnMultiplier: 2.01 },
-  { type: "range", label: "Manque / passe", probability: 48.65, totalReturnMultiplier: 2.01 },
+  { type: "color", label: "Rouge / Noir", probability: 48.65, totalReturnMultiplier: 2.01 },
+  { type: "parity", label: "Pair / Impair", probability: 48.65, totalReturnMultiplier: 2.01 },
+  { type: "range", label: "Manque / Passe", probability: 48.65, totalReturnMultiplier: 2.01 },
   { type: "dozen", label: "Douzaine", probability: 32.43, totalReturnMultiplier: 3.02 },
 ];
 
 const state = {
   me: null,
   bootstrap: null,
-  selectedChip: 1000,
+  selectedChip: 100000,
   betSlip: new Map(),
   pendingTicket: {
     bets: [],
@@ -70,6 +70,7 @@ function cacheElements() {
     autoSpinRounds: document.getElementById("autoSpinRounds"),
     balanceValue: document.getElementById("balanceValue"),
     betPanel: document.querySelector(".bet-panel"),
+    betRulesSummary: document.getElementById("betRulesSummary"),
     betSlip: document.getElementById("betSlip"),
     cancelTicketButton: document.getElementById("cancelTicketButton"),
     cashoutAmount: document.getElementById("cashoutAmount"),
@@ -84,18 +85,17 @@ function cacheElements() {
     clearBetsButton: document.getElementById("clearBetsButton"),
     closeResultModal: document.getElementById("closeResultModal"),
     confirmedTicketValue: document.getElementById("confirmedTicketValue"),
+    greenMaxValue: document.getElementById("greenMaxValue"),
     historyList: document.getElementById("historyList"),
-    jackpotValue: document.getElementById("jackpotValue"),
     lastNumbers: document.getElementById("lastNumbers"),
     leaderboardList: document.getElementById("leaderboardList"),
-    levelValue: document.getElementById("levelValue"),
     loginForm: document.getElementById("loginForm"),
     logoutButton: document.getElementById("logoutButton"),
+    minBetValue: document.getElementById("minBetValue"),
     notificationList: document.getElementById("notificationList"),
     numberGrid: document.getElementById("numberGrid"),
     playerApp: document.getElementById("playerApp"),
     probabilityCards: document.getElementById("probabilityCards"),
-    profitValue: document.getElementById("profitValue"),
     readNotificationsButton: document.getElementById("readNotificationsButton"),
     registerForm: document.getElementById("registerForm"),
     resultMeta: document.getElementById("resultMeta"),
@@ -110,6 +110,7 @@ function cacheElements() {
     spinButton: document.getElementById("spinButton"),
     statsGrid: document.getElementById("statsGrid"),
     stopAutoSpinButton: document.getElementById("stopAutoSpinButton"),
+    ticketMaxValue: document.getElementById("ticketMaxValue"),
     ticketTotal: document.getElementById("ticketTotal"),
     pendingCashoutCard: document.getElementById("pendingCashoutCard"),
   });
@@ -201,6 +202,7 @@ function applyBootstrap(payload, options = {}) {
   }
 
   renderMetrics();
+  renderBetRulesSummary();
   renderRoundPanel();
   renderLastNumbers(payload.lastNumbers);
   renderHistory(payload.history);
@@ -435,6 +437,22 @@ function getPendingCashoutRequest() {
   );
 }
 
+function getRouletteRules() {
+  return state.bootstrap?.roulette || {};
+}
+
+function getMinBet() {
+  return Number(getRouletteRules().minBet || 100000);
+}
+
+function getTicketMax() {
+  return Number(getRouletteRules().maxBet || 5000000);
+}
+
+function getGreenMaxBet() {
+  return Number(getRouletteRules().greenMaxBet || 500000);
+}
+
 function replaceBetSlip(bets) {
   state.betSlip.clear();
   for (const bet of bets) {
@@ -456,6 +474,29 @@ function addBet(type, value) {
   const key = betKey(type, value);
   const existing = state.betSlip.get(key);
   const amount = (existing?.amount || 0) + state.selectedChip;
+  const nextTicketTotal = getSlipTotal() + state.selectedChip;
+
+  if (nextTicketTotal > getTicketMax()) {
+    showToast(
+      `Le ticket ne peut pas depasser ${formatKamas(getTicketMax())}.`,
+      "error",
+    );
+    return;
+  }
+
+  if (type === "number" && Number(value) === 0) {
+    const currentGreenTotal = getSerializedSlip()
+      .filter((bet) => bet.type === "number" && Number(bet.value) === 0)
+      .reduce((sum, bet) => sum + bet.amount, 0);
+
+    if (currentGreenTotal + state.selectedChip > getGreenMaxBet()) {
+      showToast(
+        `La mise totale sur le 0 est limitee a ${formatKamas(getGreenMaxBet())}.`,
+        "error",
+      );
+      return;
+    }
+  }
 
   state.betSlip.set(key, { type, value, amount });
   renderBetSlip();
@@ -485,7 +526,7 @@ function renderBetSlip() {
   if (!bets.length) {
     elements.betSlip.innerHTML = `
       <div class="empty-state">
-        Choisis un jeton puis prepare ton ticket pour la prochaine manche.
+        Choisis un jeton et monte ton ticket pour la prochaine manche.
       </div>
     `;
     return;
@@ -616,9 +657,17 @@ function updateCashoutControls() {
 
 function renderMetrics() {
   elements.balanceValue.textContent = formatKamas(state.me?.balance);
-  elements.jackpotValue.textContent = formatKamas(state.bootstrap?.jackpotPool);
-  elements.levelValue.textContent = String(state.me?.level || 1);
-  elements.profitValue.textContent = formatKamas(state.me?.totalProfit || 0);
+  elements.minBetValue.textContent = formatKamas(getMinBet());
+  elements.ticketMaxValue.textContent = formatKamas(getTicketMax());
+  elements.greenMaxValue.textContent = formatKamas(getGreenMaxBet());
+}
+
+function renderBetRulesSummary() {
+  elements.betRulesSummary.innerHTML = `
+    <span>Mise mini ${formatKamas(getMinBet())}</span>
+    <span>Ticket max ${formatKamas(getTicketMax())}</span>
+    <span>0 limite a ${formatKamas(getGreenMaxBet())}</span>
+  `;
 }
 
 function renderRoundPanel() {
@@ -659,6 +708,7 @@ function renderLastNumbers(numbers) {
   }
 
   elements.lastNumbers.innerHTML = numbers
+    .slice(0, 8)
     .map(
       (entry) => `
         <span class="number-pill ${entry.resultColor}">
@@ -747,8 +797,8 @@ function renderStats(stats) {
     ["Manches gagnees", stats?.winningSpins || 0],
     ["Win rate", `${stats?.winRate || 0}%`],
     ["ROI", `${stats?.roi || 0}%`],
+    ["Profit total", formatKamas(state.me?.totalProfit || 0)],
     ["Bet favori", stats?.favoriteBetType || "Aucune"],
-    ["House edge", `${state.bootstrap?.roulette?.houseEdgePercent || 2}%`],
   ];
 
   elements.statsGrid.innerHTML = entries
@@ -788,14 +838,34 @@ function renderProbabilityCards(probabilities) {
   elements.probabilityCards.innerHTML = probabilities
     .map(
       (item) => `
-        <div class="probability-card">
-          <span>${escapeHtml(item.label)}</span>
-          <strong>${item.probability}%</strong>
-          <span>Payout total x${item.totalReturnMultiplier}</span>
-        </div>
+        <span class="probability-pill">${escapeHtml(describeProbability(item.type))} ${item.probability}%</span>
       `,
     )
     .join("");
+}
+
+function describeProbability(type) {
+  if (type === "number") {
+    return "N exact";
+  }
+
+  if (type === "color") {
+    return "Rouge/Noir";
+  }
+
+  if (type === "parity") {
+    return "Pair/Impair";
+  }
+
+  if (type === "range") {
+    return "1-18/19-36";
+  }
+
+  if (type === "dozen") {
+    return "Douzaine";
+  }
+
+  return type;
 }
 
 function updateSpinButtons() {
@@ -813,7 +883,10 @@ function updateSpinButtons() {
     !state.pendingTicket?.isSubmitted ||
     state.isSubmittingTicket ||
     state.isAnimatingRound;
-  elements.autoSpinButton.disabled = state.isSubmittingTicket || state.isAnimatingRound;
+  elements.autoSpinButton.disabled =
+    state.isSubmittingTicket ||
+    state.isAnimatingRound ||
+    (!state.betSlip.size && !state.pendingTicket?.bets?.length);
   elements.stopAutoSpinButton.disabled = !state.autoQueue.active;
 
   elements.autoSpinButton.textContent = state.autoQueue.active
@@ -850,7 +923,6 @@ async function submitTicket(bets, options = {}) {
     state.bootstrap = {
       ...state.bootstrap,
       currentRound: payload.currentRound,
-      jackpotPool: state.bootstrap?.jackpotPool,
       notifications: payload.notifications || state.bootstrap?.notifications || [],
       lastNumbers: payload.lastNumbers || state.bootstrap?.lastNumbers || [],
     };
@@ -915,10 +987,19 @@ async function cancelTicket() {
 
 function startAutoQueue() {
   const rounds = Number.parseInt(elements.autoSpinRounds.value, 10) || 0;
-  const template = getSerializedSlip();
+  const template = getSerializedSlip().length
+    ? getSerializedSlip()
+    : (state.pendingTicket?.bets || []).map((bet) => ({
+        type: bet.type,
+        value: bet.value,
+        amount: Number(bet.amount),
+      }));
 
   if (!template.length) {
-    showToast("Prepare un brouillon avant de lancer l'auto inscription.", "error");
+    showToast(
+      "Prepare un ticket ou reutilise le ticket confirme pour lancer l'auto spin.",
+      "error",
+    );
     return;
   }
 
@@ -927,6 +1008,7 @@ function startAutoQueue() {
     return;
   }
 
+  replaceBetSlip(template);
   state.autoQueue.active = true;
   state.autoQueue.remaining = rounds;
   state.autoQueue.template = template.map((bet) => ({ ...bet }));
@@ -942,7 +1024,7 @@ function stopAutoQueue(showNotice = false) {
   updateSpinButtons();
 
   if (showNotice && wasActive) {
-    showToast("Auto inscription terminee.", "success");
+    showToast("Auto spin termine.", "success");
   }
 }
 
@@ -973,7 +1055,7 @@ async function maybeSubmitAutoTicket() {
   );
 
   if ((state.me?.balance || 0) < templateTotal) {
-    showToast("Solde insuffisant pour continuer l'auto inscription.", "error");
+    showToast("Solde insuffisant pour continuer l'auto spin.", "error");
     stopAutoQueue();
     return;
   }
@@ -1213,7 +1295,6 @@ async function handleRoundState(payload) {
     pendingTicket: state.pendingTicket,
     latestResolvedRound: payload.latestResolvedRound,
     latestPlayerSpin: payload.latestPlayerSpin,
-    jackpotPool: payload.jackpotPool,
     lastNumbers: payload.lastNumbers,
     serverTime: payload.serverTime,
     cashoutRequests: state.cashoutRequests,
@@ -1256,9 +1337,7 @@ async function onRoundResolved(round, playerSpin) {
       openResultModal(round, playerSpin);
 
       if (state.soundEnabled) {
-        if (playerSpin.jackpotWin > 0) {
-          state.audio.jackpot().catch(() => {});
-        } else if (playerSpin.netResult >= 0) {
+        if (playerSpin.netResult >= 0) {
           state.audio.win().catch(() => {});
         } else {
           state.audio.lose().catch(() => {});
@@ -1323,12 +1402,12 @@ function drawWheel(rotation = state.wheelRotation) {
 
   context.beginPath();
   context.arc(0, 0, radius + 16, 0, Math.PI * 2);
-  context.fillStyle = "#4e341c";
+  context.fillStyle = "#3a281b";
   context.fill();
 
   for (let index = 0; index < pocketCount; index += 1) {
     const number = state.bootstrap?.roulette?.wheelOrder?.[index] ?? defaultWheelOrder()[index];
-    const color = number === 0 ? "#5f8e41" : RED_NUMBERS.has(number) ? "#b64f35" : "#1f201d";
+    const color = number === 0 ? "#5e8d46" : RED_NUMBERS.has(number) ? "#b8573f" : "#25252a";
     const startAngle = -Math.PI / 2 + rotation + index * angleSize - angleSize / 2;
     const endAngle = startAngle + angleSize;
 
@@ -1339,7 +1418,7 @@ function drawWheel(rotation = state.wheelRotation) {
     context.fillStyle = color;
     context.fill();
 
-    context.strokeStyle = "rgba(216, 181, 102, 0.3)";
+    context.strokeStyle = "rgba(216, 181, 102, 0.22)";
     context.lineWidth = 2;
     context.stroke();
 
@@ -1347,8 +1426,8 @@ function drawWheel(rotation = state.wheelRotation) {
     context.rotate(startAngle + angleSize / 2);
     context.translate(0, -radius + 42);
     context.rotate(Math.PI / 2);
-    context.fillStyle = "#fff2d1";
-    context.font = "700 20px Palatino Linotype";
+    context.fillStyle = "#fff1d5";
+    context.font = "700 18px Palatino Linotype";
     context.textAlign = "center";
     context.fillText(String(number), 0, 8);
     context.restore();
@@ -1356,10 +1435,10 @@ function drawWheel(rotation = state.wheelRotation) {
 
   context.beginPath();
   context.arc(0, 0, radius * 0.58, 0, Math.PI * 2);
-  context.fillStyle = "#24170d";
+  context.fillStyle = "#23180f";
   context.fill();
-  context.lineWidth = 8;
-  context.strokeStyle = "rgba(216, 181, 102, 0.55)";
+  context.lineWidth = 7;
+  context.strokeStyle = "rgba(216, 181, 102, 0.42)";
   context.stroke();
 
   context.restore();
@@ -1408,12 +1487,7 @@ function animateWheel(targetIndex) {
 }
 
 function openResultModal(round, playerSpin) {
-  elements.resultTitle.textContent =
-    playerSpin.jackpotWin > 0
-      ? "Jackpot sur le 0 !"
-      : playerSpin.netResult >= 0
-        ? "Victoire"
-        : "Defaite";
+  elements.resultTitle.textContent = playerSpin.netResult >= 0 ? "Victoire" : "Defaite";
   elements.resultSubtitle.textContent = `La manche #${round.roundKey} tombe sur le ${round.resultNumber} ${formatRoundColor(round.resultColor)}.`;
   elements.resultMeta.innerHTML = `
     <div class="result-row">
@@ -1422,7 +1496,7 @@ function openResultModal(round, playerSpin) {
     </div>
     <div class="result-row">
       <span>Total retour</span>
-      <strong>${formatKamas(playerSpin.totalPayout + playerSpin.jackpotWin)}</strong>
+      <strong>${formatKamas(playerSpin.totalPayout)}</strong>
     </div>
     <div class="result-row">
       <span>Net de la manche</span>

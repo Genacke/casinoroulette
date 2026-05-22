@@ -123,6 +123,31 @@ function normalizeBet(rawBet) {
   };
 }
 
+function validateTicketRules(bets, rules) {
+  if (bets.some((bet) => bet.amount < rules.minBet)) {
+    throw new Error(
+      `Chaque mise doit etre d'au moins ${rules.minBet.toLocaleString("fr-FR")} kamas.`,
+    );
+  }
+
+  const totalBet = bets.reduce((sum, bet) => sum + bet.amount, 0);
+  if (totalBet > rules.maxBet) {
+    throw new Error(
+      `Le total du ticket ne peut pas depasser ${rules.maxBet.toLocaleString("fr-FR")} kamas.`,
+    );
+  }
+
+  const greenTotal = bets
+    .filter((bet) => bet.type === "number" && Number(bet.value) === 0)
+    .reduce((sum, bet) => sum + bet.amount, 0);
+
+  if (greenTotal > rules.greenMaxBet) {
+    throw new Error(
+      `La mise totale sur le 0 ne peut pas depasser ${rules.greenMaxBet.toLocaleString("fr-FR")} kamas.`,
+    );
+  }
+}
+
 function evaluateBet(bet, resultNumber, houseEdgePercent) {
   const pocket = getPocket(resultNumber);
   const didWin =
@@ -168,4 +193,5 @@ module.exports = {
   normalizeBet,
   spinNumber,
   totalReturnMultiplier,
+  validateTicketRules,
 };

@@ -22,11 +22,11 @@ function cacheElements() {
     adminApp: document.getElementById("adminApp"),
     adminAuthGate: document.getElementById("adminAuthGate"),
     adminBalancePool: document.getElementById("adminBalancePool"),
-    adminJackpot: document.getElementById("adminJackpot"),
     adminLoginForm: document.getElementById("adminLoginForm"),
     adminLogoutButton: document.getElementById("adminLogoutButton"),
     adminPendingCashouts: document.getElementById("adminPendingCashouts"),
     adminPlayerCount: document.getElementById("adminPlayerCount"),
+    adminTotalSpins: document.getElementById("adminTotalSpins"),
     adminTotalWagered: document.getElementById("adminTotalWagered"),
     balanceAdjustForm: document.getElementById("balanceAdjustForm"),
     logsTable: document.getElementById("logsTable"),
@@ -181,7 +181,7 @@ function renderDashboard() {
   elements.adminPlayerCount.textContent = String(summary.playerCount);
   elements.adminBalancePool.textContent = formatKamas(summary.playerBalance);
   elements.adminTotalWagered.textContent = formatKamas(summary.totalWagered);
-  elements.adminJackpot.textContent = formatKamas(summary.jackpotPool);
+  elements.adminTotalSpins.textContent = String(summary.totalSpins || 0);
   elements.adminPendingCashouts.textContent = String(summary.pendingCashoutCount || 0);
 
   renderPendingCashoutRequests(state.dashboard.pendingCashoutRequests);
@@ -566,7 +566,6 @@ function renderLogs(type, rows) {
           <th>Numero</th>
           <th>Mise</th>
           <th>Payout</th>
-          <th>Jackpot</th>
           <th>Net</th>
           <th>Date</th>
         </tr>
@@ -580,7 +579,6 @@ function renderLogs(type, rows) {
                 <td>${row.resultNumber} (${escapeHtml(row.resultColor)})</td>
                 <td>${formatKamas(row.totalBet)}</td>
                 <td>${formatKamas(row.totalPayout)}</td>
-                <td>${formatKamas(row.jackpotWin)}</td>
                 <td>${formatKamas(row.netResult)}</td>
                 <td>${formatDate(row.createdAt)}</td>
               </tr>

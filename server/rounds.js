@@ -2,9 +2,7 @@ const { config } = require("./config");
 const {
   all,
   get,
-  getSetting,
   run,
-  setSetting,
   withTransaction,
 } = require("./db");
 const {
@@ -12,6 +10,7 @@ const {
   evaluateBet,
   getPocket,
   spinNumber,
+  validateTicketRules,
 } = require("./roulette");
 
 const ROUND_STATUS = {
@@ -97,8 +96,6 @@ function serializeRound(row, nowMs = Date.now()) {
     totalBet: Number(row.total_bet || 0),
     totalPayout: Number(row.total_payout || 0),
     houseDelta: Number(row.house_delta || 0),
-    jackpotContribution: Number(row.jackpot_contribution || 0),
-    jackpotWinTotal: Number(row.jackpot_win_total || 0),
     acceptingBets:
       row.status === ROUND_STATUS.open && lockedAtMs > nowMs,
     secondsUntilClose: Math.max(
@@ -222,7 +219,6 @@ async function getLatestPlayerSpin(userId, roundId) {
         result_color AS resultColor,
         total_bet AS totalBet,
         total_payout AS totalPayout,
-        jackpot_win AS jackpotWin,
         net_result AS netResult,
         created_at AS createdAt
       FROM spins
@@ -245,7 +241,6 @@ async function getLatestPlayerSpin(userId, roundId) {
     resultColor: row.resultColor,
     totalBet: Number(row.totalBet),
     totalPayout: Number(row.totalPayout),
-    jackpotWin: Number(row.jackpotWin),
     netResult: Number(row.netResult),
     createdAt: row.createdAt,
   };
@@ -269,6 +264,7 @@ async function setPlayerTicket(userId, normalizedBets) {
     const nowMs = Date.now();
     const roundRow = await ensureCurrentRound(nowMs);
     validateRoundOpenForBets(roundRow, nowMs);
+    validateTicketRules(normalizedBets, config);
 
     const user = await get("SELECT * FROM users WHERE id = ?", [userId]);
     if (!user) {
@@ -458,11 +454,10 @@ async function cancelPlayerTicket(userId) {
 async function buildRoundState(userId) {
   const nowMs = Date.now();
   const currentRoundRow = await ensureCurrentRound(nowMs);
-  const [latestResolvedRoundRow, pendingTicket, jackpotPool, user, lastNumbers] =
+  const [latestResolvedRoundRow, pendingTicket, user, lastNumbers] =
     await Promise.all([
       getLatestResolvedRoundRow(),
       getPendingTicket(userId, currentRoundRow.id),
-      getSetting("jackpot_pool", config.initialJackpotPool),
       get("SELECT * FROM users WHERE id = ?", [userId]),
       getRecentRoundNumbers(),
     ]);
@@ -479,7 +474,6 @@ async function buildRoundState(userId) {
     pendingTicket,
     latestResolvedRound,
     latestPlayerSpin,
-    jackpotPool: Number(jackpotPool || config.initialJackpotPool),
     lastNumbers,
     serverTime: new Date(nowMs).toISOString(),
   };
@@ -538,9 +532,6 @@ async function resolveNextDueRound() {
 
     const resultNumber = spinNumber();
     const pocket = getPocket(resultNumber);
-    let jackpotPool = Number(
-      await getSetting("jackpot_pool", config.initialJackpotPool),
-    );
 
     const ticketsByUser = new Map();
 
@@ -564,7 +555,6 @@ async function resolveNextDueRound() {
     const userTickets = [];
     let totalRoundBet = 0;
     let totalRoundPayout = 0;
-    let totalJackpotContribution = 0;
 
     for (const ticket of ticketsByUser.values()) {
       const totalBet = ticket.rows.reduce((sum, bet) => sum + bet.amount, 0);
@@ -584,44 +574,21 @@ async function resolveNextDueRound() {
         (sum, bet) => sum + bet.totalReturn,
         0,
       );
-      const jackpotContribution = Math.floor(
-        totalBet * (config.jackpotContributionPercent / 100),
-      );
-      const jackpotEligible = resolvedBets.some(
-        (bet) => bet.type === "number" && Number(bet.value) === 0 && bet.didWin,
-      );
 
       totalRoundBet += totalBet;
       totalRoundPayout += payout;
-      totalJackpotContribution += jackpotContribution;
 
       userTickets.push({
         userId: ticket.userId,
         username: ticket.username,
         totalBet,
         payout,
-        jackpotContribution,
-        jackpotEligible,
         resolvedBets,
       });
     }
 
-    jackpotPool += totalJackpotContribution;
-
-    const jackpotWinners = userTickets.filter((ticket) => ticket.jackpotEligible);
-    let jackpotShare = 0;
-    let jackpotWinTotal = 0;
-
-    if (jackpotWinners.length > 0 && jackpotPool > 0) {
-      jackpotShare = Math.floor(jackpotPool / jackpotWinners.length);
-      jackpotWinTotal = jackpotShare * jackpotWinners.length;
-      const jackpotRemainder = jackpotPool - jackpotWinTotal;
-      jackpotPool = config.initialJackpotPool + jackpotRemainder;
-    }
-
     for (const ticket of userTickets) {
-      const jackpotWin = ticket.jackpotEligible ? jackpotShare : 0;
-      const totalPayout = ticket.payout + jackpotWin;
+      const totalPayout = ticket.payout;
       const netResult = totalPayout - ticket.totalBet;
       const user = await get("SELECT * FROM users WHERE id = ?", [ticket.userId]);
       const balanceBefore = Number(user.balance);
@@ -634,11 +601,11 @@ async function resolveNextDueRound() {
             round_id,
             username_snapshot,
             result_number,
-            result_color,
-            total_bet,
-            total_payout,
-            net_result,
-            house_delta,
+          result_color,
+          total_bet,
+          total_payout,
+          net_result,
+          house_delta,
             jackpot_contribution,
             jackpot_win
           )
@@ -651,11 +618,11 @@ async function resolveNextDueRound() {
           resultNumber,
           pocket.color,
           ticket.totalBet,
-          ticket.payout,
+          totalPayout,
           netResult,
           ticket.totalBet - totalPayout,
-          ticket.jackpotContribution,
-          jackpotWin,
+          0,
+          0,
         ],
       );
 
@@ -738,29 +705,6 @@ async function resolveNextDueRound() {
         );
       }
 
-      if (jackpotWin > 0) {
-        await run(
-          `
-            INSERT INTO balance_logs (
-              user_id,
-              type,
-              amount,
-              balance_before,
-              balance_after,
-              note
-            )
-            VALUES (?, 'jackpot', ?, ?, ?, ?)
-          `,
-          [
-            ticket.userId,
-            jackpotWin,
-            balanceBefore + ticket.payout,
-            balanceAfter,
-            `Jackpot round #${dueRound.round_key}`,
-          ],
-        );
-      }
-
       await run(
         `
           INSERT INTO notifications (user_id, type, message)
@@ -775,19 +719,6 @@ async function resolveNextDueRound() {
         ],
       );
 
-      if (jackpotWin > 0) {
-        await run(
-          `
-            INSERT INTO notifications (user_id, type, message)
-            VALUES (?, 'jackpot', ?)
-          `,
-          [
-            ticket.userId,
-            `Jackpot partage sur le 0: +${jackpotWin.toLocaleString("fr-FR")} kamas.`,
-          ],
-        );
-      }
-
       await run(
         `
           UPDATE scheduled_bets
@@ -800,8 +731,6 @@ async function resolveNextDueRound() {
         [spinInsert.lastID, dueRound.id, ticket.userId],
       );
     }
-
-    const totalPaid = totalRoundPayout + jackpotWinTotal;
 
     await run(
       `
@@ -823,15 +752,13 @@ async function resolveNextDueRound() {
         pocket.color,
         WHEEL_ORDER.indexOf(resultNumber),
         totalRoundBet,
-        totalPaid,
-        totalRoundBet - totalPaid,
-        totalJackpotContribution,
-        jackpotWinTotal,
+        totalRoundPayout,
+        totalRoundBet - totalRoundPayout,
+        0,
+        0,
         dueRound.id,
       ],
     );
-
-    await setSetting("jackpot_pool", jackpotPool);
 
     const updatedRound = await get(
       `

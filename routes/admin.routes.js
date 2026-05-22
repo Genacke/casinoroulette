@@ -1,10 +1,8 @@
 const express = require("express");
 const { serializeUser } = require("../server/auth");
-const { config } = require("../server/config");
 const {
   all,
   get,
-  getSetting,
   run,
   withTransaction,
 } = require("../server/db");
@@ -69,7 +67,6 @@ async function getRecentSpinLogs(limit = 12) {
         result_color AS resultColor,
         total_bet AS totalBet,
         total_payout AS totalPayout,
-        jackpot_win AS jackpotWin,
         net_result AS netResult,
         created_at AS createdAt
       FROM spins
@@ -151,7 +148,6 @@ async function getRecentCashoutLogs(limit = 20) {
 async function getDashboardPayload() {
   const [
     summary,
-    jackpotPool,
     recentLogins,
     recentBalances,
     recentSpins,
@@ -170,7 +166,6 @@ async function getDashboardPayload() {
           FROM users
         `,
       ),
-      getSetting("jackpot_pool", config.initialJackpotPool),
       getRecentLoginLogs(),
       getRecentBalanceLogs(),
       getRecentSpinLogs(),
@@ -203,7 +198,6 @@ async function getDashboardPayload() {
       totalWagered: Number(summary?.totalWagered || 0),
       totalWon: Number(summary?.totalWon || 0),
       totalSpins: Number(spinCountRow?.totalSpins || 0),
-      jackpotPool: Number(jackpotPool || config.initialJackpotPool),
       pendingCashoutCount: pendingCashoutRequests.length,
     },
     winningPlayers,

@@ -13,8 +13,8 @@ Site de roulette style casino pour serveur prive Dofus, avec monnaie virtuelle e
 - Connexion joueur + connexion admin
 - Credit / retrait de kamas depuis le panel admin
 - Historique des tickets, gains, manches, connexions et ajustements
-- Jackpot sur le numero 0
-- Leaderboard, stats joueur, niveau, notifications, chat et auto inscription
+- Mise mini configurable, ticket max configurable et plafond dedie sur le numero 0
+- Leaderboard, stats joueur, notifications, chat et auto spin
 - Demandes de cash out joueur avec traitement admin
 - Rate limiting, anti-spam, hash des mots de passe, cookie JWT HttpOnly
 
@@ -91,9 +91,9 @@ Variables principales:
 - `ADMIN_USERNAME=admin`
 - `ADMIN_PASSWORD=ChangeMe123!`
 - `HOUSE_EDGE_PERCENT=2`
-- `JACKPOT_CONTRIBUTION_PERCENT=1`
-- `MIN_BET=100`
-- `MAX_BET=500000`
+- `MIN_BET=100000`
+- `MAX_BET=5000000`
+- `GREEN_MAX_BET=500000`
 - `ROUND_INTERVAL_SECONDS=120`
 - `ROUND_BET_LOCK_SECONDS=5`
 - `AUTO_SPIN_MAX_ROUNDS=25`
@@ -237,10 +237,9 @@ Le chemin le plus simple pour cette app est Railway avec le `Dockerfile` du repo
    - `ADMIN_USERNAME`
    - `ADMIN_PASSWORD`
    - `HOUSE_EDGE_PERCENT`
-   - `JACKPOT_CONTRIBUTION_PERCENT`
-   - `INITIAL_JACKPOT_POOL`
-   - `MIN_BET`
-   - `MAX_BET`
+   - `MIN_BET=100000`
+   - `MAX_BET=5000000`
+   - `GREEN_MAX_BET=500000`
    - `ROUND_INTERVAL_SECONDS=120`
    - `ROUND_BET_LOCK_SECONDS=5`
    - `AUTO_SPIN_MAX_ROUNDS=25`

@@ -10,7 +10,12 @@ const {
   spinCooldown,
   spinLimiter,
 } = require("../server/middleware");
-const { getProbabilities, normalizeBet, WHEEL_ORDER } = require("../server/roulette");
+const {
+  getProbabilities,
+  normalizeBet,
+  validateTicketRules,
+  WHEEL_ORDER,
+} = require("../server/roulette");
 const {
   buildRoundState,
   cancelPlayerTicket,
@@ -29,7 +34,7 @@ async function getPlayerStats(userId) {
           COUNT(*) AS spins_played,
           COALESCE(SUM(CASE WHEN net_result > 0 THEN 1 ELSE 0 END), 0) AS winning_spins,
           COALESCE(SUM(total_bet), 0) AS total_bet,
-          COALESCE(SUM(total_payout + jackpot_win), 0) AS total_paid
+          COALESCE(SUM(total_payout), 0) AS total_paid
         FROM spins
         WHERE user_id = ?
       `,
@@ -201,7 +206,6 @@ async function getPlayerBootstrap(userId) {
     cashoutRequests,
     pendingCashoutRequest:
       cashoutRequests.find((request) => request.status === "pending") || null,
-    jackpotPool: roundState.jackpotPool,
     currentRound: roundState.currentRound,
     pendingTicket: roundState.pendingTicket,
     latestResolvedRound: roundState.latestResolvedRound,
@@ -212,6 +216,7 @@ async function getPlayerBootstrap(userId) {
       houseEdgePercent: config.houseEdgePercent,
       minBet: config.minBet,
       maxBet: config.maxBet,
+      greenMaxBet: config.greenMaxBet,
       roundIntervalSeconds: config.roundIntervalSeconds,
       roundBetLockSeconds: config.roundBetLockSeconds,
       autoSpinMaxRounds: config.autoSpinMaxRounds,
@@ -247,7 +252,6 @@ router.get(
       pendingTicket: roundState.pendingTicket,
       latestResolvedRound: roundState.latestResolvedRound,
       latestPlayerSpin: roundState.latestPlayerSpin,
-      jackpotPool: roundState.jackpotPool,
       lastNumbers: roundState.lastNumbers,
       serverTime: roundState.serverTime,
       cashoutRequests,
@@ -445,20 +449,12 @@ router.post(
       return;
     }
 
-    const totalBet = normalizedBets.reduce((sum, bet) => sum + bet.amount, 0);
-
-    if (normalizedBets.some((bet) => bet.amount < config.minBet)) {
+    try {
+      validateTicketRules(normalizedBets, config);
+    } catch (error) {
       res.status(400).json({
         success: false,
-        message: `Chaque mise doit etre d'au moins ${config.minBet} kamas.`,
-      });
-      return;
-    }
-
-    if (totalBet > config.maxBet) {
-      res.status(400).json({
-        success: false,
-        message: `Le total du ticket ne peut pas depasser ${config.maxBet} kamas.`,
+        message: error.message,
       });
       return;
     }

@@ -30,7 +30,7 @@
       <section id="authGate" class="auth-layout">
         <article class="hero-card">
           <p class="eyebrow">Taverne des Kamas</p>
-          <h2>Une table de roulette taillée pour les aventuriers du Monde des Douze.</h2>
+          <h2>Une table de roulette taillee pour les aventuriers du Monde des Douze.</h2>
           <p class="hero-copy">
             Les kamas sont remis IN GAME a un admin ou croupier, puis credites
             manuellement via le panel securise. Chaque manche est tiree cote serveur
@@ -40,11 +40,10 @@
           <div class="feature-list">
             <div class="feature-chip">Roulette 0-36</div>
             <div class="feature-chip">Rounds toutes les 2 min</div>
-            <div class="feature-chip">Jackpot sur le 0</div>
-            <div class="feature-chip">Ambiance taverne fantasy</div>
-            <div class="feature-chip">Leaderboard</div>
-            <div class="feature-chip">Historique complet</div>
-            <div class="feature-chip">Auto inscription</div>
+            <div class="feature-chip">Mise mini 100 000</div>
+            <div class="feature-chip">Ticket max 5 000 000</div>
+            <div class="feature-chip">0 plafonne a 500 000</div>
+            <div class="feature-chip">Auto spin</div>
             <div class="feature-chip">Chat de taverne</div>
           </div>
         </article>
@@ -93,24 +92,24 @@
             <strong id="balanceValue">0 kamas</strong>
           </div>
           <div class="metric-card">
-            <span>Jackpot</span>
-            <strong id="jackpotValue">0 kamas</strong>
+            <span>Mise mini</span>
+            <strong id="minBetValue">0 kamas</strong>
           </div>
           <div class="metric-card">
-            <span>Niveau</span>
-            <strong id="levelValue">1</strong>
+            <span>Ticket max</span>
+            <strong id="ticketMaxValue">0 kamas</strong>
           </div>
           <div class="metric-card">
-            <span>Profit total</span>
-            <strong id="profitValue">0 kamas</strong>
+            <span>0 max</span>
+            <strong id="greenMaxValue">0 kamas</strong>
           </div>
         </section>
 
         <section class="panel wheel-panel">
           <div class="panel-header">
             <div>
-              <p class="eyebrow">Grande table</p>
-              <h3>Roue des Douze</h3>
+              <p class="eyebrow">Table centrale</p>
+              <h3>Roue des Kamas</h3>
             </div>
             <div class="last-numbers" id="lastNumbers"></div>
           </div>
@@ -139,35 +138,38 @@
               <strong id="confirmedTicketValue">0 kamas</strong>
             </div>
           </div>
-
-          <div class="spin-controls">
-            <div class="ticket-info">
-              <span>Brouillon local</span>
-              <strong id="ticketTotal">0 kamas</strong>
-            </div>
-
-            <div class="spin-actions">
-              <button id="spinButton" class="primary-button">Valider le ticket</button>
-              <button id="clearBetsButton" class="ghost-button">Vider le brouillon</button>
-              <button id="cancelTicketButton" class="ghost-button">Annuler le ticket</button>
-            </div>
-
-            <div class="auto-spin-box">
-              <label>
-                <span>Auto inscription</span>
-                <input id="autoSpinRounds" type="number" min="1" max="25" value="5" />
-              </label>
-              <button id="autoSpinButton" class="secondary-button">Demarrer</button>
-              <button id="stopAutoSpinButton" class="ghost-button">Stop</button>
-            </div>
-          </div>
         </section>
 
         <section class="panel bet-panel">
           <div class="panel-header">
             <div>
-              <p class="eyebrow">Bourse de kamas</p>
-              <h3>Compose ton ticket d'aventurier</h3>
+              <p class="eyebrow">Ticket d'aventurier</p>
+              <h3>Mises rapides</h3>
+            </div>
+          </div>
+
+          <div id="betRulesSummary" class="bet-rules-summary"></div>
+          <div id="probabilityCards" class="probability-grid"></div>
+
+          <div class="spin-controls">
+            <div class="ticket-info">
+              <span>Brouillon</span>
+              <strong id="ticketTotal">0 kamas</strong>
+            </div>
+
+            <div class="spin-actions">
+              <button id="spinButton" class="primary-button">Valider</button>
+              <button id="clearBetsButton" class="ghost-button">Vider</button>
+              <button id="cancelTicketButton" class="ghost-button">Annuler</button>
+            </div>
+
+            <div class="auto-spin-box">
+              <label>
+                <span>Auto spin</span>
+                <input id="autoSpinRounds" type="number" min="1" max="25" value="5" />
+              </label>
+              <button id="autoSpinButton" class="secondary-button">Demarrer</button>
+              <button id="stopAutoSpinButton" class="ghost-button">Stop</button>
             </div>
           </div>
 
@@ -178,23 +180,19 @@
             <button class="bet-shortcut black" data-bet-type="color" data-bet-value="black">Noir</button>
             <button class="bet-shortcut neutral" data-bet-type="parity" data-bet-value="even">Pair</button>
             <button class="bet-shortcut neutral" data-bet-type="parity" data-bet-value="odd">Impair</button>
-            <button class="bet-shortcut neutral" data-bet-type="range" data-bet-value="manque">Manque 1-18</button>
-            <button class="bet-shortcut neutral" data-bet-type="range" data-bet-value="passe">Passe 19-36</button>
-            <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="1">1ere 12</button>
-            <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="2">2eme 12</button>
-            <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="3">3eme 12</button>
+            <button class="bet-shortcut neutral" data-bet-type="range" data-bet-value="manque">1-18</button>
+            <button class="bet-shortcut neutral" data-bet-type="range" data-bet-value="passe">19-36</button>
+            <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="1">D1</button>
+            <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="2">D2</button>
+            <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="3">D3</button>
           </div>
 
           <div id="numberGrid" class="numbers-grid"></div>
 
           <div class="ticket-layout">
             <div>
-              <div class="section-title">Bets selectionnes</div>
+              <div class="section-title">Ticket en preparation</div>
               <div id="betSlip" class="bet-slip"></div>
-            </div>
-            <div>
-              <div class="section-title">Probabilites</div>
-              <div id="probabilityCards" class="probability-grid"></div>
             </div>
           </div>
         </section>
@@ -262,7 +260,7 @@
               </button>
             </article>
 
-            <article class="sub-panel">
+            <article class="sub-panel chat-panel">
               <div class="section-title">Chat de taverne</div>
               <div id="chatMessages" class="chat-messages"></div>
               <form id="chatForm" class="chat-form">
