@@ -366,6 +366,14 @@ function playersStillInHand(seats) {
   return seats.filter((seat) => ["active", "all_in"].includes(seat.seatState));
 }
 
+function isSeatInCurrentHand(seat) {
+  return (
+    ["active", "folded", "all_in"].includes(seat.seatState) ||
+    seat.handContribution > 0 ||
+    seat.holeCards.length > 0
+  );
+}
+
 function isBettingRoundComplete(table, seats) {
   const contenders = playersStillInHand(seats);
   if (contenders.length <= 1) {
@@ -1373,6 +1381,40 @@ async function buildPokerState(userId) {
     meSeat.seatNo === table.activeSeat;
   const visibleBoard = currentBoard(table).map(cardLabel);
   const showdownVisible = table.phase === "showdown";
+  const seatsTaken = seats.filter((seat) => seat.stack > 0).length;
+  const isTableFull = seatsTaken >= table.maxPlayers;
+  const meParticipating = meSeat ? isSeatInCurrentHand(meSeat) : false;
+  const playerBalance = Number(user?.balance || 0);
+  let canJoin = false;
+  let joinLabel = "Rejoindre";
+  let joinReason = "";
+
+  if (meSeat) {
+    joinLabel = "Deja assis";
+    joinReason = meParticipating
+      ? "Tu es deja engage dans cette table."
+      : "Ta place est deja reservee pour la prochaine main.";
+  } else if (isTableFull) {
+    joinLabel = "Table complete";
+    joinReason = "La table est complete pour le moment.";
+  } else if (playerBalance < table.buyIn) {
+    joinLabel = "Cave requise";
+    joinReason = `Cave requise: ${formatKamasValue(table.buyIn)}.`;
+  } else {
+    canJoin = true;
+    joinLabel = table.status === "playing" ? "S'asseoir" : "Rejoindre";
+    joinReason =
+      table.status === "playing"
+        ? "Ta place sera reservee pour la prochaine main."
+        : "Tu peux prendre place immediatement.";
+  }
+
+  const canLeave = Boolean(meSeat) && (table.status !== "playing" || !meParticipating);
+  const leaveReason = !meSeat
+    ? "Tu n'es pas assis a cette table."
+    : canLeave
+      ? "Tu peux recuperer ta cave maintenant."
+      : "Attends la fin de la main pour quitter.";
 
   return {
     tableId: table.id,
@@ -1447,12 +1489,11 @@ async function buildPokerState(userId) {
         }
       : null,
     actions: {
-      canJoin:
-        !meSeat &&
-        eligibleSeats.length < table.maxPlayers &&
-        Number(user?.balance || 0) >= table.buyIn &&
-        table.status !== "playing",
-      canLeave: Boolean(meSeat) && table.status !== "playing",
+      canJoin,
+      joinLabel,
+      joinReason,
+      canLeave,
+      leaveReason,
       canAct,
       canFold: canAct,
       canCheck: canAct && callAmount === 0,
@@ -1476,10 +1517,6 @@ async function joinPokerTable(userId) {
       throw new Error("Compte introuvable.");
     }
 
-    if (table.status === "playing") {
-      throw new Error("Attends la fin de la main en cours pour t'asseoir.");
-    }
-
     if (Number(user.balance) < table.buyIn) {
       throw new Error(
         `Il faut ${table.buyIn.toLocaleString("fr-FR")} kamas pour rejoindre cette table.`,
@@ -1489,7 +1526,9 @@ async function joinPokerTable(userId) {
     await cleanupBustedSeats(table.id);
     const refreshedSeats = await getPokerSeats(table.id);
     const existingSeat = refreshedSeats.find((seat) => seat.userId === userId) || null;
-    const occupiedSeatNumbers = refreshedSeats.map((seat) => seat.seatNo);
+    const occupiedSeatNumbers = refreshedSeats
+      .filter((seat) => seat.stack > 0)
+      .map((seat) => seat.seatNo);
 
     if (existingSeat && existingSeat.stack > 0) {
       throw new Error("Tu es deja assis a cette table.");
@@ -1569,13 +1608,27 @@ async function joinPokerTable(userId) {
       );
     }
 
-    await logPokerAction(table, user.username, "join", table.buyIn, `Siege ${seatNumber}`, userId);
+    await logPokerAction(
+      table,
+      user.username,
+      "join",
+      table.buyIn,
+      table.status === "playing"
+        ? `Siege ${seatNumber} pour la prochaine main`
+        : `Siege ${seatNumber}`,
+      userId,
+    );
     await run(
       `
         INSERT INTO notifications (user_id, type, message)
         VALUES (?, 'info', ?)
       `,
-      [userId, `Tu rejoins ${table.name} avec une cave de ${formatKamasValue(table.buyIn)}.`],
+      [
+        userId,
+        table.status === "playing"
+          ? `Tu rejoins ${table.name} avec ${formatKamasValue(table.buyIn)}. Ta place est reservee pour la prochaine main.`
+          : `Tu rejoins ${table.name} avec une cave de ${formatKamasValue(table.buyIn)}.`,
+      ],
     );
 
     return {
@@ -1595,8 +1648,8 @@ async function leavePokerTable(userId) {
       throw new Error("Tu n'es pas installe a cette table.");
     }
 
-    if (table.status === "playing") {
-      throw new Error("Tu peux quitter la table entre deux mains uniquement.");
+    if (table.status === "playing" && isSeatInCurrentHand(seat)) {
+      throw new Error("Tu peux quitter la table apres la main en cours.");
     }
 
     const balanceBefore = Number(user.balance);

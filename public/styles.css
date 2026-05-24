@@ -385,21 +385,33 @@ textarea:focus {
 .roulette-grid,
 .poker-grid {
   align-items: start;
+  width: 100%;
+  min-width: 0;
+}
+
+.player-shell {
+  grid-template-columns: 1fr;
+  grid-auto-flow: row;
 }
 
 .player-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  grid-template-columns: 1fr;
 }
 
 .roulette-grid {
+  grid-template-areas:
+    "wheel bets"
+    "history history";
   grid-template-columns: minmax(360px, 430px) minmax(0, 1fr);
 }
 
-.roulette-grid .history-panel {
-  grid-column: 1 / -1;
-}
-
 .game-switch-panel {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
   padding: 14px 18px;
 }
 
@@ -409,22 +421,64 @@ textarea:focus {
 
 .shared-side-panel {
   align-self: stretch;
+  width: 100%;
 }
 
 .poker-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  grid-template-areas:
+    "table table"
+    "seats seats"
+    "actions rules"
+    "log log";
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
 }
 
 .poker-table-panel,
 .poker-seats-panel,
 .poker-log-panel {
-  grid-column: 1 / -1;
+  grid-column: auto;
+}
+
+.roulette-grid .wheel-panel {
+  grid-area: wheel;
+}
+
+.roulette-grid .bet-panel {
+  grid-area: bets;
+}
+
+.roulette-grid .history-panel {
+  grid-area: history;
+}
+
+.poker-table-panel {
+  grid-area: table;
+}
+
+.poker-seats-panel {
+  grid-area: seats;
+}
+
+.poker-actions-panel {
+  grid-area: actions;
+}
+
+.poker-rules-panel {
+  grid-area: rules;
+}
+
+.poker-log-panel {
+  grid-area: log;
 }
 
 .poker-action-cluster {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.poker-join-state {
+  margin-top: 10px;
 }
 
 .poker-summary-grid,
@@ -569,8 +623,11 @@ textarea:focus {
   padding: 7px 10px;
 }
 
-.metrics-panel {
+.app-grid > .metrics-panel {
   grid-area: metrics;
+}
+
+.metrics-panel {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -584,20 +641,23 @@ textarea:focus {
   display: none;
 }
 
-.wheel-panel {
+.app-grid > .wheel-panel {
   grid-area: wheel;
 }
 
-.bet-panel {
+.app-grid > .bet-panel {
   grid-area: bets;
+}
+
+.bet-panel {
   padding: 14px;
 }
 
-.history-panel {
+.app-grid > .history-panel {
   grid-area: history;
 }
 
-.side-panel {
+.app-grid > .side-panel {
   grid-area: side;
 }
 
@@ -1241,11 +1301,20 @@ tr:last-child td {
       "side";
   }
 
-  .roulette-grid .history-panel,
-  .poker-table-panel,
-  .poker-seats-panel,
-  .poker-log-panel {
-    grid-column: auto;
+  .roulette-grid {
+    grid-template-areas:
+      "wheel"
+      "bets"
+      "history";
+  }
+
+  .poker-grid {
+    grid-template-areas:
+      "table"
+      "seats"
+      "actions"
+      "rules"
+      "log";
   }
 
   .side-stack {
@@ -1267,6 +1336,10 @@ tr:last-child td {
   .panel-header,
   .header-actions {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .game-switch-panel {
     align-items: stretch;
   }
 

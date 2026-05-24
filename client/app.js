@@ -131,6 +131,7 @@ function cacheElements() {
     pokerCheckCallButton: document.getElementById("pokerCheckCallButton"),
     pokerFoldButton: document.getElementById("pokerFoldButton"),
     pokerHeroCards: document.getElementById("pokerHeroCards"),
+    pokerJoinState: document.getElementById("pokerJoinState"),
     pokerMeStatus: document.getElementById("pokerMeStatus"),
     pokerPhaseValue: document.getElementById("pokerPhaseValue"),
     pokerPlayersNeeded: document.getElementById("pokerPlayersNeeded"),
@@ -1021,11 +1022,11 @@ function renderPokerSeats(poker) {
           </div>
           <div class="bet-meta">
             Siege ${seat.seatNo}
-            ${seat.isDealer ? " • Dealer" : ""}
-            ${seat.isSmallBlind ? " • SB" : ""}
-            ${seat.isBigBlind ? " • BB" : ""}
+            ${seat.isDealer ? " | Dealer" : ""}
+            ${seat.isSmallBlind ? " | SB" : ""}
+            ${seat.isBigBlind ? " | BB" : ""}
           </div>
-          <div class="bet-meta">Stack ${formatKamas(seat.stack)} • Engage ${formatKamas(seat.handContribution)}</div>
+          <div class="bet-meta">Stack ${formatKamas(seat.stack)} | Engage ${formatKamas(seat.handContribution)}</div>
           <div class="poker-seat-cards">${cardsMarkup || '<div class="bet-meta">Cartes cachees</div>'}</div>
         </article>
       `;
@@ -1042,7 +1043,15 @@ function renderPokerActions(poker) {
   const meSeat = poker?.meSeat;
 
   if (!poker) {
+    elements.joinPokerButton.disabled = true;
+    elements.joinPokerButton.textContent = "Rejoindre";
+    elements.leavePokerButton.disabled = true;
+    elements.pokerFoldButton.disabled = true;
+    elements.pokerCheckCallButton.disabled = true;
+    elements.pokerRaiseButton.disabled = true;
+    elements.pokerRaiseAmount.disabled = true;
     elements.pokerMeStatus.textContent = "Table indisponible";
+    elements.pokerJoinState.textContent = "Le croupier prepare la table.";
     elements.pokerHeroCards.innerHTML = `<div class="empty-state">Chargement de la table...</div>`;
     elements.pokerActionHint.textContent = "Le croupier prepare la table.";
     return;
@@ -1050,6 +1059,7 @@ function renderPokerActions(poker) {
 
   elements.joinPokerButton.disabled = !actions.canJoin || state.isSubmittingPokerAction;
   elements.leavePokerButton.disabled = !actions.canLeave || state.isSubmittingPokerAction;
+  elements.joinPokerButton.textContent = actions.joinLabel || "Rejoindre";
   elements.pokerFoldButton.disabled = !actions.canFold || state.isSubmittingPokerAction;
   elements.pokerCheckCallButton.disabled =
     !(actions.canCheck || actions.canCall) || state.isSubmittingPokerAction;
@@ -1063,11 +1073,14 @@ function renderPokerActions(poker) {
 
   if (!meSeat) {
     elements.pokerMeStatus.textContent = "Pas assis a la table";
+    elements.pokerJoinState.textContent = actions.joinReason || "Rejoins la table pour jouer.";
     elements.pokerHeroCards.innerHTML = `
       <div class="empty-state">Rejoins la table avec ${formatKamas(poker.buyIn)} pour jouer des mains Hold'em.</div>
     `;
   } else {
-    elements.pokerMeStatus.textContent = `Siege ${meSeat.seatNo} • ${formatPokerSeatState(meSeat.seatState)} • ${formatKamas(meSeat.stack)}`;
+    elements.pokerMeStatus.textContent = `Siege ${meSeat.seatNo} | ${formatPokerSeatState(meSeat.seatState)} | ${formatKamas(meSeat.stack)}`;
+    elements.pokerJoinState.textContent =
+      actions.leaveReason || actions.joinReason || "Ta place est enregistree.";
     elements.pokerHeroCards.innerHTML = meSeat.holeCards?.length
       ? meSeat.holeCards.map((card) => renderPokerCard(card)).join("")
       : `<div class="empty-state">Tes cartes apparaitront au debut de la prochaine main.</div>`;
@@ -1113,7 +1126,7 @@ function renderPokerLog(logEntries) {
         <div class="history-item">
           <div>
             <strong>${escapeHtml(entry.username)}</strong>
-            <div class="history-meta">${escapeHtml(entry.actionType)}${entry.details ? ` • ${escapeHtml(entry.details)}` : ""}</div>
+            <div class="history-meta">${escapeHtml(entry.actionType)}${entry.details ? ` | ${escapeHtml(entry.details)}` : ""}</div>
           </div>
           <div>
             <div>${entry.amount ? formatKamas(entry.amount) : "-"}</div>
@@ -1138,6 +1151,7 @@ function renderPoker() {
     elements.pokerTurnValue.textContent = "--";
     elements.pokerPlayersNeeded.textContent = "2 joueurs pour lancer";
     elements.pokerWinnerSummary.textContent = "La table attend des aventuriers.";
+    elements.pokerJoinState.textContent = "Chargement de la table poker.";
     elements.pokerSeatGrid.innerHTML = `<div class="empty-state">Chargement de la table...</div>`;
     elements.pokerActionLog.innerHTML = `<div class="empty-state">Aucune action enregistree.</div>`;
     renderPokerBoard({
@@ -1160,7 +1174,7 @@ function renderPoker() {
 
   if (poker.status === "playing") {
     elements.pokerTurnValue.textContent = poker.activeSeat
-      ? `${seatLabelByNumber(poker, poker.activeSeat)} • ${poker.secondsToAct}s`
+      ? `${seatLabelByNumber(poker, poker.activeSeat)} | ${poker.secondsToAct}s`
       : "Resolution";
   } else if (poker.status === "showdown") {
     elements.pokerTurnValue.textContent = poker.secondsToNextHand
