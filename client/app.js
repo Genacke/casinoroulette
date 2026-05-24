@@ -531,11 +531,15 @@ function getMinBet() {
 }
 
 function getTicketMax() {
-  return Number(getRouletteRules().maxBet || 2000000);
+  return Number(getRouletteRules().maxBet || 5000000);
 }
 
-function getGreenMaxBet() {
-  return Number(getRouletteRules().greenMaxBet || 500000);
+function getColorMaxBet() {
+  return Number(getRouletteRules().colorMaxBet || 2000000);
+}
+
+function getNumberMaxBet() {
+  return Number(getRouletteRules().numberMaxBet || 500000);
 }
 
 function replaceBetSlip(bets) {
@@ -569,18 +573,20 @@ function addBet(type, value) {
     return;
   }
 
-  if (type === "number" && Number(value) === 0) {
-    const currentGreenTotal = getSerializedSlip()
-      .filter((bet) => bet.type === "number" && Number(bet.value) === 0)
-      .reduce((sum, bet) => sum + bet.amount, 0);
+  if (type === "color" && amount > getColorMaxBet()) {
+    showToast(
+      `Chaque couleur est limitee a ${formatKamas(getColorMaxBet())}.`,
+      "error",
+    );
+    return;
+  }
 
-    if (currentGreenTotal + state.selectedChip > getGreenMaxBet()) {
-      showToast(
-        `La mise totale sur le 0 est limitee a ${formatKamas(getGreenMaxBet())}.`,
-        "error",
-      );
-      return;
-    }
+  if (type === "number" && amount > getNumberMaxBet()) {
+    showToast(
+      `Chaque numero, y compris le 0, est limite a ${formatKamas(getNumberMaxBet())}.`,
+      "error",
+    );
+    return;
   }
 
   state.betSlip.set(key, { type, value, amount });
@@ -750,14 +756,15 @@ function renderMetrics() {
   elements.balanceValue.textContent = formatKamas(state.me?.balance);
   elements.minBetValue.textContent = formatKamas(getMinBet());
   elements.ticketMaxValue.textContent = formatKamas(getTicketMax());
-  elements.greenMaxValue.textContent = formatKamas(getGreenMaxBet());
+  elements.greenMaxValue.textContent = formatKamas(getNumberMaxBet());
 }
 
 function renderBetRulesSummary() {
   elements.betRulesSummary.innerHTML = `
     <span>Mise mini ${formatKamas(getMinBet())}</span>
-    <span>Autres mises max ${formatKamas(getTicketMax())}</span>
-    <span>0 limite a ${formatKamas(getGreenMaxBet())}</span>
+    <span>Ticket max ${formatKamas(getTicketMax())}</span>
+    <span>Couleurs max ${formatKamas(getColorMaxBet())}</span>
+    <span>Numeros max ${formatKamas(getNumberMaxBet())}</span>
   `;
 }
 

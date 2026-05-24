@@ -21,8 +21,9 @@ const config = {
   houseEdgePercent: Number(process.env.HOUSE_EDGE_PERCENT || 2),
   cashoutFeePercent: Number(process.env.CASHOUT_FEE_PERCENT || 2),
   minBet: toInt(process.env.MIN_BET, 200000),
-  maxBet: toInt(process.env.MAX_BET, 2000000),
-  greenMaxBet: toInt(process.env.GREEN_MAX_BET, 500000),
+  maxBet: toInt(process.env.ROULETTE_TICKET_MAX_BET, 5000000),
+  colorMaxBet: toInt(process.env.ROULETTE_COLOR_MAX_BET, 2000000),
+  numberMaxBet: toInt(process.env.ROULETTE_NUMBER_MAX_BET, 500000),
   roundIntervalSeconds: Math.max(
     1,
     Math.min(30, toInt(process.env.ROUND_INTERVAL_SECONDS, 30)),

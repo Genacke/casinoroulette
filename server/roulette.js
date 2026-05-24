@@ -137,14 +137,35 @@ function validateTicketRules(bets, rules) {
     );
   }
 
-  const greenTotal = bets
-    .filter((bet) => bet.type === "number" && Number(bet.value) === 0)
-    .reduce((sum, bet) => sum + bet.amount, 0);
+  const colorTotals = new Map();
+  const numberTotals = new Map();
 
-  if (greenTotal > rules.greenMaxBet) {
-    throw new Error(
-      `La mise totale sur le 0 ne peut pas depasser ${rules.greenMaxBet.toLocaleString("fr-FR")} kamas.`,
-    );
+  for (const bet of bets) {
+    if (bet.type === "color") {
+      const key = String(bet.value);
+      colorTotals.set(key, (colorTotals.get(key) || 0) + bet.amount);
+    }
+
+    if (bet.type === "number") {
+      const key = String(bet.value);
+      numberTotals.set(key, (numberTotals.get(key) || 0) + bet.amount);
+    }
+  }
+
+  for (const total of colorTotals.values()) {
+    if (total > rules.colorMaxBet) {
+      throw new Error(
+        `Chaque couleur est limitee a ${rules.colorMaxBet.toLocaleString("fr-FR")} kamas.`,
+      );
+    }
+  }
+
+  for (const total of numberTotals.values()) {
+    if (total > rules.numberMaxBet) {
+      throw new Error(
+        `Chaque numero, y compris le 0, est limite a ${rules.numberMaxBet.toLocaleString("fr-FR")} kamas.`,
+      );
+    }
   }
 }
 
