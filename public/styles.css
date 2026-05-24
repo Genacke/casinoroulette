@@ -785,22 +785,22 @@ textarea:focus {
 .connect4-stage-layout {
   margin-top: 16px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 250px;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  gap: 12px;
   align-items: start;
 }
 
 .connect4-board-shell,
 .connect4-side-card {
-  padding: 14px;
-  border-radius: 24px;
+  padding: 12px;
+  border-radius: 22px;
   border: 1px solid rgba(216, 181, 102, 0.12);
   background: rgba(9, 8, 8, 0.44);
 }
 
 .connect4-board-shell {
   width: 100%;
-  max-width: 980px;
+  max-width: 620px;
   justify-self: center;
 }
 
@@ -813,24 +813,24 @@ textarea:focus {
 
 .connect4-board-topbar {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .connect4-drop-row {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 4px;
+  margin-bottom: 6px;
 }
 
 .connect4-drop-button {
-  min-height: 34px;
-  border-radius: 12px;
+  min-height: 26px;
+  border-radius: 10px;
   border: 1px solid rgba(216, 181, 102, 0.12);
   background: rgba(255, 255, 255, 0.03);
   color: var(--muted);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   cursor: pointer;
 }
 
@@ -846,9 +846,9 @@ textarea:focus {
 
 .connect4-board {
   display: grid;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 22px;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 18px;
   border: 1px solid rgba(216, 181, 102, 0.12);
   background:
     radial-gradient(circle at top center, rgba(239, 174, 84, 0.06), transparent 44%),
@@ -857,14 +857,14 @@ textarea:focus {
 
 .connect4-board-row {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .connect4-board-cell {
   aspect-ratio: 1;
-  min-height: 44px;
-  border-radius: 16px;
+  min-height: 30px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   background:
@@ -874,7 +874,7 @@ textarea:focus {
 }
 
 .connect4-disc {
-  width: min(66%, 40px);
+  width: min(60%, 22px);
   aspect-ratio: 1;
   border-radius: 50%;
   display: block;
@@ -900,12 +900,13 @@ textarea:focus {
 }
 
 .connect4-match-status {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: 16px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 14px;
   border: 1px solid rgba(216, 181, 102, 0.1);
   background: rgba(255, 255, 255, 0.03);
   color: var(--muted);
+  font-size: 0.86rem;
 }
 
 .connect4-side-head {
@@ -917,8 +918,8 @@ textarea:focus {
 }
 
 .connect4-seat-card {
-  padding: 10px;
-  border-radius: 16px;
+  padding: 8px 9px;
+  border-radius: 14px;
   border: 1px solid rgba(216, 181, 102, 0.1);
   background: rgba(255, 255, 255, 0.03);
 }
@@ -940,7 +941,7 @@ textarea:focus {
 }
 
 .connect4-info-grid {
-  margin-top: 10px;
+  margin-top: 8px;
   grid-template-columns: 1fr;
 }
 

@@ -213,6 +213,40 @@ async function ensureConnect4Table() {
   );
 
   if (row) {
+    const hasPlayers = Boolean(row.red_user_id || row.yellow_user_id);
+    const needsRefresh =
+      Number(row.entry_fee) !== config.connect4EntryFee
+      || Number(row.turn_seconds) !== config.connect4TurnSeconds
+      || Number(row.showdown_seconds) !== config.connect4ShowdownSeconds;
+
+    if (needsRefresh && !hasPlayers && row.status !== "playing") {
+      await run(
+        `
+          UPDATE connect4_tables
+          SET entry_fee = ?,
+              turn_seconds = ?,
+              showdown_seconds = ?,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `,
+        [
+          config.connect4EntryFee,
+          config.connect4TurnSeconds,
+          config.connect4ShowdownSeconds,
+          row.id,
+        ],
+      );
+
+      row = await get(
+        `
+          SELECT *
+          FROM connect4_tables
+          WHERE slug = ?
+        `,
+        [TABLE_PRESET.slug],
+      );
+    }
+
     return mapTableRow(row);
   }
 
@@ -437,6 +471,7 @@ async function buildConnect4State(userId) {
     slug: table.slug,
     name: table.name,
     entryFee: table.entryFee,
+    winnerPayout: config.connect4WinnerPayout,
     turnSeconds: table.turnSeconds,
     showdownSeconds: table.showdownSeconds,
     status: table.status,
@@ -544,6 +579,10 @@ async function resolveWin(table, winnerColor, reason, options = {}) {
   const board = options.board || table.board;
   const moveCount = Number(options.moveCount ?? table.moveCount);
   const reasonLabel = describeWinnerReason(reason);
+  const winnerPayout = Math.max(
+    0,
+    Math.min(Number(config.connect4WinnerPayout || 0), Number(table.pot || 0)),
+  );
 
   if (!winnerSeat.userId) {
     await resetConnect4Table(table.id);
@@ -552,20 +591,20 @@ async function resolveWin(table, winnerColor, reason, options = {}) {
 
   await applyUserLedger(
     winnerSeat.userId,
-    table.pot,
+    winnerPayout,
     "connect4_win",
     `Gain Puissance 4 Blitz (${reasonLabel})`,
     {
-      winIncrement: table.pot,
-      profitIncrement: table.pot,
-      highestWinCandidate: table.pot,
+      winIncrement: winnerPayout,
+      profitIncrement: winnerPayout,
+      highestWinCandidate: winnerPayout,
     },
   );
 
   await pushNotification(
     winnerSeat.userId,
     "win",
-    `Tu remportes ${table.pot.toLocaleString("fr-FR")} kamas sur Puissance 4 Blitz (${reasonLabel}).`,
+    `Tu remportes ${winnerPayout.toLocaleString("fr-FR")} kamas sur Puissance 4 Blitz (${reasonLabel}).`,
   );
 
   if (loserSeat.userId) {

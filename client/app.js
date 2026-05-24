@@ -834,8 +834,8 @@ function renderMetrics() {
     elements.metricMaxLabel.textContent = "Gain";
     elements.metricSideLabel.textContent = "Tempo";
     elements.minBetValue.textContent = formatKamas(state.connect4.entryFee || 0);
-    elements.ticketMaxValue.textContent = formatKamas((state.connect4.entryFee || 0) * 2);
-    elements.greenMaxValue.textContent = `${state.connect4.turnSeconds || 5} sec`;
+    elements.ticketMaxValue.textContent = formatKamas(state.connect4.winnerPayout || 0);
+    elements.greenMaxValue.textContent = `${state.connect4.turnSeconds || 7} sec`;
     return;
   }
 
@@ -1176,8 +1176,8 @@ function renderConnect4() {
     elements.connect4PotValue.textContent = formatKamas(0);
     elements.connect4TurnValue.textContent = "En attente";
     elements.connect4TimerValue.textContent = "00:07";
-    elements.connect4EntryFeeValue.textContent = formatKamas(100000);
-    elements.connect4PrizeValue.textContent = formatKamas(200000);
+    elements.connect4EntryFeeValue.textContent = formatKamas(500000);
+    elements.connect4PrizeValue.textContent = formatKamas(900000);
     elements.connect4TurnSecondsValue.textContent = "7 sec";
     elements.connect4SeatList.innerHTML = "";
     elements.connect4TurnHint.textContent = "Une partie commence des que 2 joueurs sont assis.";
@@ -1206,7 +1206,7 @@ function renderConnect4() {
         : connect4.turnSeconds || 7,
   );
   elements.connect4EntryFeeValue.textContent = formatKamas(connect4.entryFee || 0);
-  elements.connect4PrizeValue.textContent = formatKamas((connect4.entryFee || 0) * 2);
+  elements.connect4PrizeValue.textContent = formatKamas(connect4.winnerPayout || 0);
   elements.connect4TurnSecondsValue.textContent = `${connect4.turnSeconds || 7} sec`;
   elements.connect4MatchStatus.textContent = connect4.statusText;
 
