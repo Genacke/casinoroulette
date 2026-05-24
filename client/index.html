@@ -46,7 +46,7 @@
             <div class="feature-chip">Ticket max 5 000 000</div>
             <div class="feature-chip">Couleurs max 2 000 000</div>
             <div class="feature-chip">Numeros max 500 000</div>
-            <div class="feature-chip">Table poker 10 000 000</div>
+            <div class="feature-chip">Table poker 1 000 000</div>
             <div class="feature-chip">Retrait -2%</div>
             <div class="feature-chip">Auto spin</div>
             <div class="feature-chip">Chat de taverne</div>
@@ -326,9 +326,9 @@
                     <div class="poker-rules-list">
                       <div class="feature-chip">Texas Hold'em no limit</div>
                       <div class="feature-chip">La main part a 2 joueurs</div>
-                      <div class="feature-chip">Cave fixe 10 000 000</div>
-                      <div class="feature-chip">Petite blind 200 000</div>
-                      <div class="feature-chip">Grosse blind 400 000</div>
+                      <div class="feature-chip">Cave fixe 1 000 000</div>
+                      <div class="feature-chip">Petite blind 20 000</div>
+                      <div class="feature-chip">Grosse blind 40 000</div>
                       <div class="feature-chip">Pause entre deux mains</div>
                     </div>
                   </aside>
@@ -585,12 +585,15 @@
                 <div class="panel-header">
                   <div>
                     <p class="eyebrow">Machine a sous</p>
-                    <h3>Portes du Dofus</h3>
+                    <h3 id="slotMachineTitle">Portes du Dofus</h3>
                   </div>
                   <div class="slot-machine-badges">
                     <span class="status-pill" id="slotModeBadge">Base game</span>
+                    <span class="status-pill" id="slotJackpotBadge">Jackpot 0 kamas</span>
                   </div>
                 </div>
+
+                <div id="slotMachineList" class="slot-machine-list"></div>
 
                 <div class="slots-machine-shell">
                   <div class="slot-stage">
@@ -622,6 +625,17 @@
                       <h3>Tourne les rouleaux</h3>
                     </div>
 
+                    <div class="slot-occupancy-grid">
+                      <div class="ticket-info">
+                        <span>Statut</span>
+                        <strong id="slotMachineStatusValue">Libre</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Occupant</span>
+                        <strong id="slotMachineOwnerValue">Personne</strong>
+                      </div>
+                    </div>
+
                     <div class="slot-bet-grid">
                       <label>
                         <span>Mise totale</span>
@@ -640,6 +654,15 @@
                     </div>
 
                     <div id="slotBetPresets" class="slot-bet-presets"></div>
+
+                    <div class="slot-action-row">
+                      <button id="slotClaimButton" class="secondary-button" type="button">
+                        Prendre la machine
+                      </button>
+                      <button id="slotReleaseButton" class="ghost-button" type="button">
+                        Quitter la machine
+                      </button>
+                    </div>
 
                     <div class="slot-action-row">
                       <button id="slotSpinButton" class="primary-button" type="button">

@@ -18,6 +18,7 @@ const ROUND_STATUS = {
   resolving: "resolving",
   resolved: "resolved",
 };
+const ROULETTE_CYCLE_LENGTH = 100;
 
 let roundEngineStarted = false;
 let roundEngineBusy = false;
@@ -41,6 +42,29 @@ function roundIntervalMs() {
 
 function roundBetLockMs() {
   return config.roundBetLockSeconds * 1000;
+}
+
+function buildRoundCycle(spinSequence) {
+  const safeSequence = Math.max(1, Number(spinSequence || 1));
+  return {
+    spinSequence: safeSequence,
+    cycleNumber: Math.floor((safeSequence - 1) / ROULETTE_CYCLE_LENGTH) + 1,
+    cycleSpinNumber: ((safeSequence - 1) % ROULETTE_CYCLE_LENGTH) + 1,
+    cycleLength: ROULETTE_CYCLE_LENGTH,
+  };
+}
+
+function decorateRoundCycle(round, spinSequence) {
+  if (!round) {
+    return null;
+  }
+
+  const cycle = buildRoundCycle(spinSequence);
+  return {
+    ...round,
+    ...cycle,
+    displayLabel: `Spin ${String(cycle.cycleSpinNumber).padStart(3, "0")}/${cycle.cycleLength}`,
+  };
 }
 
 function currentRoundKey(nowMs = Date.now()) {
@@ -161,6 +185,18 @@ async function getRecentRoundNumbers(limit = 14) {
     `,
     [limit],
   );
+}
+
+async function getResolvedRoundCount() {
+  const row = await get(
+    `
+      SELECT COUNT(*) AS total
+      FROM roulette_rounds
+      WHERE status = 'resolved'
+    `,
+  );
+
+  return Number(row?.total || 0);
 }
 
 async function getPendingTicket(userId, roundId) {
@@ -454,15 +490,19 @@ async function cancelPlayerTicket(userId) {
 async function buildRoundState(userId) {
   const nowMs = Date.now();
   const currentRoundRow = await ensureCurrentRound(nowMs);
-  const [latestResolvedRoundRow, pendingTicket, user, lastNumbers] =
+  const [latestResolvedRoundRow, pendingTicket, user, lastNumbers, totalResolvedRounds] =
     await Promise.all([
       getLatestResolvedRoundRow(),
       getPendingTicket(userId, currentRoundRow.id),
       get("SELECT * FROM users WHERE id = ?", [userId]),
       getRecentRoundNumbers(),
+      getResolvedRoundCount(),
     ]);
 
-  const latestResolvedRound = serializeRound(latestResolvedRoundRow, nowMs);
+  const latestResolvedRound = decorateRoundCycle(
+    serializeRound(latestResolvedRoundRow, nowMs),
+    totalResolvedRounds,
+  );
   const latestPlayerSpin = await getLatestPlayerSpin(
     userId,
     latestResolvedRound?.id || null,
@@ -470,12 +510,16 @@ async function buildRoundState(userId) {
 
   return {
     user,
-    currentRound: serializeRound(currentRoundRow, nowMs),
+    currentRound: decorateRoundCycle(
+      serializeRound(currentRoundRow, nowMs),
+      totalResolvedRounds + 1,
+    ),
     pendingTicket,
     latestResolvedRound,
     latestPlayerSpin,
     lastNumbers,
     serverTime: new Date(nowMs).toISOString(),
+    totalResolvedRounds,
   };
 }
 
@@ -820,6 +864,7 @@ module.exports = {
   ensureCurrentRound,
   getPendingTicket,
   getRecentRoundNumbers,
+  ROULETTE_CYCLE_LENGTH,
   roundIntervalMs,
   serializeRound,
   setPlayerTicket,

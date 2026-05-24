@@ -38,6 +38,33 @@ const BONUS_MULTIPLIER_START = 2;
 const BONUS_MULTIPLIER_CAP = 25;
 const DEFAULT_CLIENT_SEED = "aventurier";
 const SLOT_MATH_PATH = path.join(config.rootDir, "database", "slots-math.json");
+const SLOT_MACHINE_PRESETS = [
+  {
+    slug: "amakna-doree",
+    name: "Amakna doree",
+    vibe: "Salle doree",
+    description: "La machine la plus simple pour lancer des spins rapides entre deux manches.",
+    accent: "gold",
+    baseJackpot: 150000,
+  },
+  {
+    slug: "brakmar-ember",
+    name: "Brakmar Ember",
+    vibe: "Neons rouges",
+    description: "Une borne plus nerveuse, reservee aux joueurs qui veulent une ambiance plus chaude.",
+    accent: "ember",
+    baseJackpot: 200000,
+  },
+  {
+    slug: "bonta-ivory",
+    name: "Bonta Ivory",
+    vibe: "Salon calme",
+    description: "Un coin plus propre, parfait pour jouer seul sans se faire coller.",
+    accent: "forest",
+    baseJackpot: 250000,
+  },
+];
+const DEFAULT_SLOT_MACHINE_SLUG = SLOT_MACHINE_PRESETS[0].slug;
 
 const SLOT_SYMBOLS = [
   {
@@ -204,6 +231,22 @@ const ROLLERS = {
   base: WEIGHT_TABLES.base.map((weightMap) => createWeightedRoller(weightMap)),
   bonus: WEIGHT_TABLES.bonus.map((weightMap) => createWeightedRoller(weightMap)),
 };
+
+function toSqlTimestamp(input = Date.now()) {
+  return new Date(input).toISOString().replace("T", " ").slice(0, 19);
+}
+
+function fromSqlTimestamp(value) {
+  if (!value) {
+    return null;
+  }
+
+  return Date.parse(String(value).replace(" ", "T") + "Z");
+}
+
+function getSlotMachinePreset(slug) {
+  return SLOT_MACHINE_PRESETS.find((machine) => machine.slug === slug) || SLOT_MACHINE_PRESETS[0];
+}
 
 function sanitizeClientSeed(input) {
   const candidate = String(input || "")
@@ -473,6 +516,19 @@ async function ensureSlotSession(userId) {
   let session = await get("SELECT * FROM slot_sessions WHERE user_id = ?", [userId]);
 
   if (session) {
+    if (!session.machine_slug) {
+      await run(
+        `
+          UPDATE slot_sessions
+          SET machine_slug = ?,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE user_id = ?
+        `,
+        [DEFAULT_SLOT_MACHINE_SLUG, userId],
+      );
+      session = await get("SELECT * FROM slot_sessions WHERE user_id = ?", [userId]);
+    }
+
     return session;
   }
 
@@ -482,14 +538,15 @@ async function ensureSlotSession(userId) {
     `
       INSERT OR IGNORE INTO slot_sessions (
         user_id,
+        machine_slug,
         server_seed,
         server_seed_hash,
         client_seed,
         next_nonce
       )
-      VALUES (?, ?, ?, ?, 0)
+      VALUES (?, ?, ?, ?, ?, 0)
     `,
-    [userId, serverSeed, serverSeedHash, DEFAULT_CLIENT_SEED],
+    [userId, DEFAULT_SLOT_MACHINE_SLUG, serverSeed, serverSeedHash, DEFAULT_CLIENT_SEED],
   );
 
   session = await get("SELECT * FROM slot_sessions WHERE user_id = ?", [userId]);
@@ -569,6 +626,7 @@ function buildPublicConfig() {
     minBet: config.slotMinBet,
     maxBet: config.slotMaxBet,
     betStep: config.slotBetStep,
+    jackpotIncrement: config.slotJackpotIncrement,
     maxWinMultiplier: config.slotMaxWinMultiplier,
     targetRtp: config.slotTargetRtp,
     targetHouseEdge: Number((100 - config.slotTargetRtp).toFixed(2)),
@@ -638,10 +696,13 @@ function mapSlotSpinRow(row) {
   const summary = JSON.parse(row.summary_json);
   return {
     id: Number(row.id),
+    machineSlug: row.machine_slug || summary.machineSlug || DEFAULT_SLOT_MACHINE_SLUG,
+    machineName: row.machine_name_snapshot || summary.machineName || getSlotMachinePreset(row.machine_slug).name,
     spinMode: row.spin_mode,
     betAmount: Number(row.bet_amount),
     totalWin: Number(row.total_win),
     netResult: Number(row.net_result),
+    jackpotWin: Number(row.jackpot_win || summary.jackpotWin || 0),
     hit: Boolean(row.hit),
     cascadeCount: Number(row.cascade_count),
     scatterCount: Number(row.scatter_count),
@@ -658,9 +719,226 @@ function mapSlotSpinRow(row) {
   };
 }
 
-async function buildSlotState(userId) {
-  const [session, historyRows, stats] = await Promise.all([
+function mapSlotMachineRow(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: Number(row.id),
+    slug: row.slug,
+    name: row.name,
+    vibe: row.vibe || "",
+    description: row.description || "",
+    accent: row.accent || "gold",
+    baseJackpot: Number(row.base_jackpot || 0),
+    jackpotAmount: Number(row.jackpot_amount || 0),
+    occupiedUserId: row.occupied_user_id ? Number(row.occupied_user_id) : null,
+    occupiedUsername: row.occupied_username_snapshot || null,
+    occupiedAt: row.occupied_at || null,
+    updatedAt: row.updated_at || null,
+  };
+}
+
+async function ensureSlotMachines() {
+  for (const preset of SLOT_MACHINE_PRESETS) {
+    await run(
+      `
+        INSERT INTO slot_machines (
+          slug,
+          name,
+          vibe,
+          description,
+          accent,
+          base_jackpot,
+          jackpot_amount,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(slug) DO UPDATE SET
+          name = excluded.name,
+          vibe = excluded.vibe,
+          description = excluded.description,
+          accent = excluded.accent,
+          base_jackpot = excluded.base_jackpot,
+          jackpot_amount = CASE
+            WHEN slot_machines.jackpot_amount < slot_machines.base_jackpot
+              THEN excluded.base_jackpot
+            ELSE slot_machines.jackpot_amount
+          END,
+          updated_at = slot_machines.updated_at
+      `,
+      [
+        preset.slug,
+        preset.name,
+        preset.vibe,
+        preset.description,
+        preset.accent,
+        preset.baseJackpot,
+        preset.baseJackpot,
+      ],
+    );
+  }
+}
+
+async function releaseStaleSlotMachineLocks() {
+  const staleBefore = toSqlTimestamp(Date.now() - config.slotMachineLockSeconds * 1000);
+  await run(
+    `
+      UPDATE slot_machines
+      SET occupied_user_id = NULL,
+          occupied_username_snapshot = NULL,
+          occupied_at = NULL,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE occupied_user_id IS NOT NULL
+        AND updated_at <= ?
+    `,
+    [staleBefore],
+  );
+}
+
+async function getSlotMachineRows() {
+  const rows = await all(
+    `
+      SELECT *
+      FROM slot_machines
+      ORDER BY id ASC
+    `,
+  );
+
+  return rows.map(mapSlotMachineRow);
+}
+
+function resolveSelectedSlotMachineSlug(machines, requestedMachineSlug, userId, session) {
+  if (requestedMachineSlug && machines.some((machine) => machine.slug === requestedMachineSlug)) {
+    return requestedMachineSlug;
+  }
+
+  const claimedMachine = machines.find((machine) => machine.occupiedUserId === Number(userId));
+  if (claimedMachine) {
+    return claimedMachine.slug;
+  }
+
+  if (session?.machine_slug && machines.some((machine) => machine.slug === session.machine_slug)) {
+    return session.machine_slug;
+  }
+
+  return machines[0]?.slug || DEFAULT_SLOT_MACHINE_SLUG;
+}
+
+function buildMachineLobbyEntry(machine, userId, selectedMachineSlug) {
+  const isMine = machine.occupiedUserId === Number(userId);
+  const occupiedByOther = Boolean(machine.occupiedUserId && !isMine);
+  return {
+    slug: machine.slug,
+    name: machine.name,
+    vibe: machine.vibe,
+    description: machine.description,
+    accent: machine.accent,
+    jackpotAmount: machine.jackpotAmount,
+    occupied: Boolean(machine.occupiedUserId),
+    occupiedByMe: isMine,
+    occupiedByOther,
+    occupiedUsername: machine.occupiedUsername,
+    isSelected: machine.slug === selectedMachineSlug,
+    canClaim: !machine.occupiedUserId || isMine,
+    canRelease: isMine,
+    statusLabel: isMine
+      ? "Ta machine"
+      : occupiedByOther
+        ? `Occupee par ${machine.occupiedUsername}`
+        : "Libre",
+  };
+}
+
+async function claimSlotMachineLock(user, session, requestedMachineSlug) {
+  await ensureSlotMachines();
+  await releaseStaleSlotMachineLocks();
+
+  const machines = await getSlotMachineRows();
+  const machine =
+    machines.find((entry) => entry.slug === (requestedMachineSlug || session.machine_slug)) || machines[0];
+
+  if (!machine) {
+    throw new Error("Machine a sous introuvable.");
+  }
+
+  if (
+    Number(session.free_spins_remaining || 0) > 0
+    && session.machine_slug
+    && session.machine_slug !== machine.slug
+  ) {
+    throw new Error("Termine les free spins sur ta machine actuelle avant d'en changer.");
+  }
+
+  if (machine.occupiedUserId && machine.occupiedUserId !== Number(user.id)) {
+    throw new Error("Cette machine est deja occupee.");
+  }
+
+  await run(
+    `
+      UPDATE slot_machines
+      SET occupied_user_id = NULL,
+          occupied_username_snapshot = NULL,
+          occupied_at = NULL,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE occupied_user_id = ?
+        AND slug <> ?
+    `,
+    [user.id, machine.slug],
+  );
+
+  await run(
+    `
+      UPDATE slot_machines
+      SET occupied_user_id = ?,
+          occupied_username_snapshot = ?,
+          occupied_at = COALESCE(occupied_at, CURRENT_TIMESTAMP),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `,
+    [user.id, user.username, machine.id],
+  );
+
+  await run(
+    `
+      UPDATE slot_sessions
+      SET machine_slug = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ?
+    `,
+    [machine.slug, user.id],
+  );
+
+  return mapSlotMachineRow(
+    await get(
+      `
+        SELECT *
+        FROM slot_machines
+        WHERE id = ?
+      `,
+      [machine.id],
+    ),
+  );
+}
+
+function didTriggerMachineJackpot(summary) {
+  return (summary?.cascades || []).some((cascade) =>
+    (cascade.lineWins || []).some(
+      (lineWin) =>
+        lineWin.matchCount >= 5
+        && (lineWin.symbolId === "dragon" || lineWin.symbolId === "wild"),
+    ),
+  );
+}
+
+async function buildSlotState(userId, requestedMachineSlug = null) {
+  await ensureSlotMachines();
+  await releaseStaleSlotMachineLocks();
+
+  const [session, machines, historyRows, stats] = await Promise.all([
     ensureSlotSession(userId),
+    getSlotMachineRows(),
     all(
       `
         SELECT *
@@ -694,14 +972,30 @@ async function buildSlotState(userId) {
   const bonusTriggers = Number(stats?.bonus_triggers || 0);
   const wagered = Number(stats?.wagered || 0);
   const totalWin = Number(stats?.total_win || 0);
+  const selectedMachineSlug = resolveSelectedSlotMachineSlug(
+    machines,
+    requestedMachineSlug,
+    userId,
+    session,
+  );
+  const currentMachine =
+    machines.find((machine) => machine.slug === selectedMachineSlug) || machines[0] || null;
 
   return {
     config: buildPublicConfig(),
     provablyFair: buildProvablyFairState(session),
+    selectedMachineSlug,
+    currentMachine: currentMachine
+      ? buildMachineLobbyEntry(currentMachine, userId, selectedMachineSlug)
+      : null,
+    machines: machines.map((machine) =>
+      buildMachineLobbyEntry(machine, userId, selectedMachineSlug),
+    ),
     activeBonus: {
       freeSpinsRemaining: Number(session.free_spins_remaining || 0),
       currentMultiplier: Number(session.bonus_multiplier || BONUS_MULTIPLIER_START),
       lockedBet: Number(session.bonus_bet || 0),
+      machineSlug: session.machine_slug || selectedMachineSlug,
     },
     recentSpins: historyRows.map(mapSlotSpinRow),
     stats: {
@@ -724,11 +1018,11 @@ async function buildSlotState(userId) {
   };
 }
 
-function buildSpinSeed(session, nonce, mode) {
-  return `${session.server_seed}:${session.client_seed}:${nonce}:${mode}`;
+function buildSpinSeed(session, nonce, mode, machineSlug = session.machine_slug || DEFAULT_SLOT_MACHINE_SLUG) {
+  return `${session.server_seed}:${session.client_seed}:${nonce}:${mode}:${machineSlug}`;
 }
 
-async function spinSlots(userId, requestedBet) {
+async function spinSlots(userId, requestedMachineSlug, requestedBet) {
   return withTransaction(async () => {
     const user = await get("SELECT * FROM users WHERE id = ?", [userId]);
     const session = await ensureSlotSession(userId);
@@ -736,6 +1030,9 @@ async function spinSlots(userId, requestedBet) {
     if (!user) {
       throw new Error("Compte introuvable.");
     }
+
+    const machine = await claimSlotMachineLock(user, session, requestedMachineSlug);
+    const machinePreset = getSlotMachinePreset(machine.slug);
 
     const hasFreeSpins = Number(session.free_spins_remaining || 0) > 0;
     const mode = hasFreeSpins ? "bonus" : "base";
@@ -748,7 +1045,7 @@ async function spinSlots(userId, requestedBet) {
     }
 
     const nonce = Number(session.next_nonce || 0);
-    const rng = createHashRng(buildSpinSeed(session, nonce, mode));
+    const rng = createHashRng(buildSpinSeed(session, nonce, mode, machine.slug));
     const outcome = resolveSpin({
       betAmount,
       mode,
@@ -757,10 +1054,18 @@ async function spinSlots(userId, requestedBet) {
         ? Number(session.bonus_multiplier || BONUS_MULTIPLIER_START)
         : 1,
     });
-    const cappedTotalWin = Math.min(
+    const baseCappedWin = Math.min(
       outcome.totalWin,
       betAmount * config.slotMaxWinMultiplier,
     );
+    const jackpotBeforeSpin = Number(machine.jackpotAmount || machinePreset.baseJackpot || 0);
+    const jackpotAfterContribution = jackpotBeforeSpin + config.slotJackpotIncrement;
+    const jackpotTriggered = didTriggerMachineJackpot(outcome);
+    const jackpotPayoutRoom = Math.max(0, betAmount * config.slotMaxWinMultiplier - baseCappedWin);
+    const jackpotWin = jackpotTriggered
+      ? Math.min(jackpotAfterContribution, jackpotPayoutRoom)
+      : 0;
+    const cappedTotalWin = baseCappedWin + jackpotWin;
     const netResult = mode === "bonus" ? cappedTotalWin : cappedTotalWin - betAmount;
     const freeSpinsAwarded = Number(outcome.freeSpinsAwarded || 0);
     const freeSpinsRemainingBefore = Number(session.free_spins_remaining || 0);
@@ -788,6 +1093,9 @@ async function spinSlots(userId, requestedBet) {
     const winIncrement = cappedTotalWin;
     const profitIncrement = netResult;
     const highestWin = Math.max(Number(user.highest_win || 0), cappedTotalWin);
+    const nextJackpotAmount = jackpotTriggered
+      ? machinePreset.baseJackpot
+      : jackpotAfterContribution;
 
     await run(
       `
@@ -813,6 +1121,7 @@ async function spinSlots(userId, requestedBet) {
       `
         UPDATE slot_sessions
         SET next_nonce = ?,
+            machine_slug = ?,
             free_spins_remaining = ?,
             bonus_multiplier = ?,
             bonus_bet = ?,
@@ -823,6 +1132,7 @@ async function spinSlots(userId, requestedBet) {
       `,
       [
         nonce + 1,
+        machine.slug,
         freeSpinsRemaining,
         bonusMultiplier,
         bonusBet,
@@ -831,10 +1141,32 @@ async function spinSlots(userId, requestedBet) {
       ],
     );
 
+    await run(
+      `
+        UPDATE slot_machines
+        SET jackpot_amount = ?,
+            occupied_user_id = ?,
+            occupied_username_snapshot = ?,
+            occupied_at = COALESCE(occupied_at, CURRENT_TIMESTAMP),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `,
+      [nextJackpotAmount, user.id, user.username, machine.id],
+    );
+
     const summary = {
       ...outcome,
+      machineSlug: machine.slug,
+      machineName: machine.name,
+      machineAccent: machine.accent,
+      jackpotBeforeSpin,
+      jackpotContribution: config.slotJackpotIncrement,
+      jackpotAfterContribution,
+      jackpotTriggered,
+      jackpotWin,
+      jackpotResetTo: jackpotTriggered ? machinePreset.baseJackpot : null,
       totalWin: cappedTotalWin,
-      cappedByMaxWin: cappedTotalWin !== outcome.totalWin,
+      cappedByMaxWin: cappedTotalWin !== outcome.totalWin + jackpotWin,
       freeSpinsRemainingAfter: freeSpinsRemaining,
       triggeredBonus: mode === "base" && freeSpinsAwarded > 0,
       retriggered: mode === "bonus" && freeSpinsAwarded > 0,
@@ -846,6 +1178,8 @@ async function spinSlots(userId, requestedBet) {
         INSERT INTO slot_spins (
           user_id,
           username_snapshot,
+          machine_slug,
+          machine_name_snapshot,
           spin_mode,
           bet_amount,
           total_win,
@@ -858,16 +1192,19 @@ async function spinSlots(userId, requestedBet) {
           bonus_multiplier_start,
           bonus_multiplier_end,
           max_applied_multiplier,
+          jackpot_win,
           server_seed_hash,
           client_seed,
           nonce,
           summary_json
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         userId,
         user.username,
+        machine.slug,
+        machine.name,
         mode,
         betAmount,
         cappedTotalWin,
@@ -880,6 +1217,7 @@ async function spinSlots(userId, requestedBet) {
         outcome.bonusMultiplierStart,
         mode === "bonus" ? bonusMultiplier : outcome.bonusMultiplierEnd,
         outcome.maxAppliedMultiplier,
+        jackpotWin,
         session.server_seed_hash,
         session.client_seed,
         nonce,
@@ -890,13 +1228,16 @@ async function spinSlots(userId, requestedBet) {
     const updatedUser = await get("SELECT * FROM users WHERE id = ?", [userId]);
     return {
       user: updatedUser,
-      slotState: await buildSlotState(userId),
+      slotState: await buildSlotState(userId, machine.slug),
       spinResult: {
+        machineSlug: machine.slug,
+        machineName: machine.name,
         mode,
         nonce,
         betAmount,
         totalWin: cappedTotalWin,
         netResult,
+        jackpotWin,
         freeSpinsAwarded,
         freeSpinsRemaining,
         summary,
@@ -905,7 +1246,67 @@ async function spinSlots(userId, requestedBet) {
   });
 }
 
-async function updateSlotClientSeed(userId, requestedClientSeed) {
+async function claimSlotMachine(userId, requestedMachineSlug) {
+  return withTransaction(async () => {
+    const user = await get("SELECT * FROM users WHERE id = ?", [userId]);
+    const session = await ensureSlotSession(userId);
+
+    if (!user) {
+      throw new Error("Compte introuvable.");
+    }
+
+    const machine = await claimSlotMachineLock(user, session, requestedMachineSlug);
+
+    return {
+      user,
+      machine,
+      slotState: await buildSlotState(userId, machine.slug),
+    };
+  });
+}
+
+async function releaseSlotMachine(userId, requestedMachineSlug = null) {
+  return withTransaction(async () => {
+    await ensureSlotMachines();
+    await releaseStaleSlotMachineLocks();
+
+    const session = await ensureSlotSession(userId);
+    if (Number(session.free_spins_remaining || 0) > 0) {
+      throw new Error("Termine les free spins en cours avant de quitter la machine.");
+    }
+
+    const machineSlug = requestedMachineSlug || session.machine_slug || DEFAULT_SLOT_MACHINE_SLUG;
+
+    await run(
+      `
+        UPDATE slot_machines
+        SET occupied_user_id = NULL,
+            occupied_username_snapshot = NULL,
+            occupied_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE slug = ?
+          AND occupied_user_id = ?
+      `,
+      [machineSlug, userId],
+    );
+
+    await run(
+      `
+        UPDATE slot_sessions
+        SET machine_slug = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ?
+      `,
+      [DEFAULT_SLOT_MACHINE_SLUG, userId],
+    );
+
+    return {
+      slotState: await buildSlotState(userId, DEFAULT_SLOT_MACHINE_SLUG),
+    };
+  });
+}
+
+async function updateSlotClientSeed(userId, requestedClientSeed, requestedMachineSlug = null) {
   const clientSeed = sanitizeClientSeed(requestedClientSeed);
 
   return withTransaction(async () => {
@@ -920,11 +1321,11 @@ async function updateSlotClientSeed(userId, requestedClientSeed) {
       [clientSeed, userId],
     );
 
-    return buildSlotState(userId);
+    return buildSlotState(userId, requestedMachineSlug);
   });
 }
 
-async function rotateSlotSeeds(userId, requestedClientSeed) {
+async function rotateSlotSeeds(userId, requestedClientSeed, requestedMachineSlug = null) {
   return withTransaction(async () => {
     const session = await ensureSlotSession(userId);
 
@@ -964,7 +1365,7 @@ async function rotateSlotSeeds(userId, requestedClientSeed) {
       ],
     );
 
-    return buildSlotState(userId);
+    return buildSlotState(userId, requestedMachineSlug || session.machine_slug || DEFAULT_SLOT_MACHINE_SLUG);
   });
 }
 
@@ -1108,6 +1509,8 @@ module.exports = {
   SLOT_SYMBOLS,
   buildPublicConfig,
   buildSlotState,
+  claimSlotMachine,
+  releaseSlotMachine,
   ensureSlotSession,
   loadMathSnapshot,
   rotateSlotSeeds,

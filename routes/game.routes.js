@@ -20,6 +20,7 @@ const {
   buildRoundState,
   cancelPlayerTicket,
   getRecentRoundNumbers,
+  ROULETTE_CYCLE_LENGTH,
   setPlayerTicket,
 } = require("../server/rounds");
 const { buildConnect4State } = require("../server/connect4");
@@ -269,6 +270,7 @@ async function getPlayerBootstrap(userId, pokerTableSlug = null) {
       roundIntervalSeconds: config.roundIntervalSeconds,
       roundBetLockSeconds: config.roundBetLockSeconds,
       autoSpinMaxRounds: config.autoSpinMaxRounds,
+      cycleLength: ROULETTE_CYCLE_LENGTH,
       probabilities: getProbabilities(config.houseEdgePercent),
     },
   };

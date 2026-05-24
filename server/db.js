@@ -426,6 +426,7 @@ async function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS slot_sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL UNIQUE,
+      machine_slug TEXT,
       server_seed TEXT NOT NULL,
       server_seed_hash TEXT NOT NULL,
       client_seed TEXT NOT NULL DEFAULT 'aventurier',
@@ -443,10 +444,28 @@ async function initializeDatabase() {
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS slot_machines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      vibe TEXT NOT NULL DEFAULT '',
+      description TEXT NOT NULL DEFAULT '',
+      accent TEXT NOT NULL DEFAULT 'gold',
+      base_jackpot INTEGER NOT NULL DEFAULT 0,
+      jackpot_amount INTEGER NOT NULL DEFAULT 0,
+      occupied_user_id INTEGER,
+      occupied_username_snapshot TEXT,
+      occupied_at TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(occupied_user_id) REFERENCES users(id)
+    );
+
     CREATE TABLE IF NOT EXISTS slot_spins (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
       username_snapshot TEXT NOT NULL,
+      machine_slug TEXT,
+      machine_name_snapshot TEXT,
       spin_mode TEXT NOT NULL CHECK(spin_mode IN ('base', 'bonus')),
       bet_amount INTEGER NOT NULL,
       total_win INTEGER NOT NULL DEFAULT 0,
@@ -459,6 +478,7 @@ async function initializeDatabase() {
       bonus_multiplier_start INTEGER NOT NULL DEFAULT 1,
       bonus_multiplier_end INTEGER NOT NULL DEFAULT 1,
       max_applied_multiplier INTEGER NOT NULL DEFAULT 1,
+      jackpot_win INTEGER NOT NULL DEFAULT 0,
       server_seed_hash TEXT NOT NULL,
       client_seed TEXT NOT NULL,
       nonce INTEGER NOT NULL,
@@ -508,6 +528,9 @@ async function initializeDatabase() {
       ON slot_spins (user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_slot_spins_mode_created
       ON slot_spins (spin_mode, created_at DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_slot_machines_occupied_user
+      ON slot_machines (occupied_user_id)
+      WHERE occupied_user_id IS NOT NULL;
   `);
 
   await ensureColumn("spins", "round_id", "INTEGER");
@@ -515,10 +538,25 @@ async function initializeDatabase() {
   await ensureColumn("cashout_requests", "fee_amount", "INTEGER NOT NULL DEFAULT 0");
   await ensureColumn("cashout_requests", "net_amount", "INTEGER NOT NULL DEFAULT 0");
   await ensureColumn("poker_seats", "hand_contribution", "INTEGER NOT NULL DEFAULT 0");
+  await ensureColumn("slot_sessions", "machine_slug", "TEXT");
+  await ensureColumn("slot_spins", "machine_slug", "TEXT");
+  await ensureColumn("slot_spins", "machine_name_snapshot", "TEXT");
+  await ensureColumn("slot_spins", "jackpot_win", "INTEGER NOT NULL DEFAULT 0");
   await exec(`
     CREATE INDEX IF NOT EXISTS idx_spins_round_id
       ON spins (round_id);
   `);
+  await exec(`
+    CREATE INDEX IF NOT EXISTS idx_slot_spins_machine_created
+      ON slot_spins (machine_slug, created_at DESC);
+  `);
+  await run(
+    `
+      UPDATE slot_sessions
+      SET machine_slug = COALESCE(machine_slug, 'amakna-doree')
+      WHERE machine_slug IS NULL
+    `,
+  );
 
   const adminHash = await hashPassword(config.adminPassword);
   const existingAdmin = await get("SELECT id FROM users WHERE username = ?", [

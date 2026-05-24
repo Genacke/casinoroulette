@@ -108,9 +108,11 @@ Variables principales:
 - `ROUND_INTERVAL_SECONDS=30`
 - `ROUND_BET_LOCK_SECONDS=5`
 - `AUTO_SPIN_MAX_ROUNDS=25`
-- `POKER_TABLE_BUY_IN=10000000`
-- `POKER_SMALL_BLIND=200000`
-- `POKER_BIG_BLIND=400000`
+- `POKER_TABLE_BUY_IN=1000000`
+- `POKER_SMALL_BLIND=20000`
+- `POKER_BIG_BLIND=40000`
+- `SLOT_JACKPOT_INCREMENT=10`
+- `SLOT_MACHINE_LOCK_SECONDS=180`
 - `POKER_MIN_PLAYERS=2`
 - `POKER_MAX_PLAYERS=6`
 - `POKER_TURN_SECONDS=25`
@@ -184,7 +186,7 @@ npm run dev
 ## Poker
 
 - Format: Texas Hold'em no limit
-- Une table globale 10 000 000 kamas de cave
+- Trois tables Texas Hold'em a 1 000 000 kamas de cave
 - Petite blind 200 000, grosse blind 400 000 par defaut
 - La main demarre des que 2 joueurs sont assis
 - Les cartes, le board et les tours sont calcules cote serveur
@@ -341,9 +343,11 @@ Le chemin le plus simple pour cette app est Railway avec le `Dockerfile` du repo
 - `ROUND_INTERVAL_SECONDS=30`
 - `ROUND_BET_LOCK_SECONDS=5`
 - `AUTO_SPIN_MAX_ROUNDS=25`
-- `POKER_TABLE_BUY_IN=10000000`
-- `POKER_SMALL_BLIND=200000`
-- `POKER_BIG_BLIND=400000`
+- `POKER_TABLE_BUY_IN=1000000`
+- `POKER_SMALL_BLIND=20000`
+- `POKER_BIG_BLIND=40000`
+- `SLOT_JACKPOT_INCREMENT=10`
+- `SLOT_MACHINE_LOCK_SECONDS=180`
 - `POKER_MIN_PLAYERS=2`
 - `POKER_MAX_PLAYERS=6`
 - `POKER_TURN_SECONDS=25`

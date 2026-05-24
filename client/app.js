@@ -82,8 +82,10 @@ const state = {
   isLoadingPokerView: false,
   isSubmittingPokerAction: false,
   slots: null,
+  selectedSlotMachineSlug: null,
   selectedSlotBet: 100000,
   isLoadingSlotsView: false,
+  isSubmittingSlotMachine: false,
   isSubmittingSlotSpin: false,
   isSubmittingSlotSeed: false,
   slotDisplayGrid: null,
@@ -221,13 +223,20 @@ function cacheElements() {
     slotBetInput: document.getElementById("slotBetInput"),
     slotBetPresets: document.getElementById("slotBetPresets"),
     slotCascadeTrail: document.getElementById("slotCascadeTrail"),
+    slotClaimButton: document.getElementById("slotClaimButton"),
     slotFreeSpinsValue: document.getElementById("slotFreeSpinsValue"),
     slotHistoryList: document.getElementById("slotHistoryList"),
+    slotJackpotBadge: document.getElementById("slotJackpotBadge"),
     slotLastWinValue: document.getElementById("slotLastWinValue"),
+    slotMachineList: document.getElementById("slotMachineList"),
+    slotMachineOwnerValue: document.getElementById("slotMachineOwnerValue"),
+    slotMachineStatusValue: document.getElementById("slotMachineStatusValue"),
+    slotMachineTitle: document.getElementById("slotMachineTitle"),
     slotModeBadge: document.getElementById("slotModeBadge"),
     slotMultiplierValue: document.getElementById("slotMultiplierValue"),
     slotPaylineValue: document.getElementById("slotPaylineValue"),
     slotReels: document.getElementById("slotReels"),
+    slotReleaseButton: document.getElementById("slotReleaseButton"),
     slotSimpleNote: document.getElementById("slotSimpleNote"),
     slotSpinButton: document.getElementById("slotSpinButton"),
     slotStatusText: document.getElementById("slotStatusText"),
@@ -317,9 +326,12 @@ function bindEvents() {
   elements.pokerFoldButton.addEventListener("click", () => submitPokerAction("fold"));
   elements.pokerCheckCallButton.addEventListener("click", onPokerPrimaryAction);
   elements.pokerRaiseButton.addEventListener("click", onPokerRaise);
+  elements.slotClaimButton.addEventListener("click", claimSelectedSlotMachine);
+  elements.slotReleaseButton.addEventListener("click", releaseSelectedSlotMachine);
   elements.slotSpinButton.addEventListener("click", submitSlotSpin);
   elements.slotBetPresets.addEventListener("click", onSlotBetPresetClick);
   elements.slotBetInput.addEventListener("change", onSlotBetInputChange);
+  elements.slotMachineList.addEventListener("click", onSlotMachineListClick);
   elements.pokerTableList.addEventListener("click", (event) => {
     const selector = event.target.closest("[data-select-poker-table]");
     if (!selector) {
@@ -394,6 +406,9 @@ function applyBootstrap(payload, options = {}) {
   state.skribbl = payload.skribbl || null;
   state.poker = payload.poker || null;
   state.slots = payload.slots || null;
+  state.selectedSlotMachineSlug =
+    payload.slots?.selectedMachineSlug || state.selectedSlotMachineSlug || null;
+  state.slotLastSpinResult = payload.slots?.recentSpins?.[0] || state.slotLastSpinResult;
   state.selectedPokerTableSlug =
     payload.poker?.selectedTableSlug || state.selectedPokerTableSlug || null;
   if (!state.selectedSlotBet && payload.slots?.config?.minBet) {
@@ -555,8 +570,10 @@ async function logout() {
   state.poker = null;
   state.isLoadingPokerView = false;
   state.slots = null;
+  state.selectedSlotMachineSlug = null;
   state.selectedSlotBet = 100000;
   state.isLoadingSlotsView = false;
+  state.isSubmittingSlotMachine = false;
   state.isSubmittingSlotSpin = false;
   state.isSubmittingSlotSeed = false;
   state.slotDisplayGrid = null;
@@ -949,10 +966,10 @@ function renderMetrics() {
   if (state.activeView === "slots" && state.slots?.config) {
     elements.metricMinLabel.textContent = "Mise mini";
     elements.metricMaxLabel.textContent = "Mise max";
-    elements.metricSideLabel.textContent = "Max win";
+    elements.metricSideLabel.textContent = "Jackpot";
     elements.minBetValue.textContent = formatKamas(state.slots.config.minBet);
     elements.ticketMaxValue.textContent = formatKamas(state.slots.config.maxBet);
-    elements.greenMaxValue.textContent = `x${state.slots.config.maxWinMultiplier}`;
+    elements.greenMaxValue.textContent = formatKamas(getSlotCurrentMachine()?.jackpotAmount || 0);
     return;
   }
 
@@ -996,7 +1013,7 @@ function renderRoundPanel() {
     return;
   }
 
-  elements.roundLabel.textContent = `#${currentRound.roundKey}`;
+  elements.roundLabel.textContent = currentRound.displayLabel || `#${currentRound.roundKey}`;
   elements.roundTimerValue.textContent = formatCountdown(
     currentRound.secondsUntilLock ?? currentRound.secondsUntilClose ?? 0,
   );
@@ -2079,6 +2096,30 @@ function getSlotsState() {
   return state.slots || state.bootstrap?.slots || null;
 }
 
+function getSelectedSlotMachineSlug() {
+  return (
+    state.selectedSlotMachineSlug ||
+    getSlotsState()?.selectedMachineSlug ||
+    getSlotsState()?.currentMachine?.slug ||
+    null
+  );
+}
+
+function getSlotCurrentMachine() {
+  const slots = getSlotsState();
+  const selectedMachineSlug = getSelectedSlotMachineSlug();
+
+  if (!slots?.machines?.length) {
+    return slots?.currentMachine || null;
+  }
+
+  return (
+    slots.machines.find((machine) => machine.slug === selectedMachineSlug) ||
+    slots.currentMachine ||
+    slots.machines[0]
+  );
+}
+
 function getSlotConfig() {
   return getSlotsState()?.config || null;
 }
@@ -2094,12 +2135,24 @@ function getSlotActiveBonus() {
 }
 
 function getSlotDisplayGrid() {
-  if (state.slotDisplayGrid) {
+  const selectedMachineSlug = getSlotCurrentMachine()?.slug || null;
+
+  if (
+    state.slotDisplayGrid
+    && (!selectedMachineSlug || state.slotLastSpinResult?.machineSlug === selectedMachineSlug)
+  ) {
     return state.slotDisplayGrid;
   }
 
-  const latestSpin = state.slotLastSpinResult?.summary || getSlotsState()?.recentSpins?.[0]?.summary;
-  return latestSpin?.finalGrid || latestSpin?.openingGrid || null;
+  const latestSpin = [
+    state.slotLastSpinResult,
+    ...(getSlotsState()?.recentSpins || []),
+  ].find((spin) => spin?.machineSlug === selectedMachineSlug)
+    || state.slotLastSpinResult
+    || getSlotsState()?.recentSpins?.[0]
+    || null;
+  const latestSummary = latestSpin?.summary || latestSpin || null;
+  return latestSummary?.finalGrid || latestSummary?.openingGrid || null;
 }
 
 function normalizeSlotBetValue(rawValue) {
@@ -2380,12 +2433,12 @@ function renderSlotHistory(slotState) {
       (spin) => `
         <div class="history-item">
           <div>
-            <strong>${spin.spinMode === "bonus" ? "Free spin" : "Spin payant"} #${spin.nonce}</strong>
+            <strong>${escapeHtml(spin.machineName || "Machine")} · ${spin.spinMode === "bonus" ? "Free spin" : "Spin payant"} #${spin.nonce}</strong>
             <div class="history-meta">
               ${formatDate(spin.createdAt)} - ${spin.summary.nearMiss ? "near miss 2 scatters" : `${spin.scatterCount} scatter(s)`}
             </div>
             <div class="bet-meta">
-              ${spin.cascadeCount} cascade(s) - ${spin.freeSpinsAwarded > 0 ? `+${spin.freeSpinsAwarded} free spins` : "pas de bonus"}
+              ${spin.cascadeCount} cascade(s) - ${spin.freeSpinsAwarded > 0 ? `+${spin.freeSpinsAwarded} free spins` : "pas de bonus"}${spin.jackpotWin > 0 ? ` - jackpot ${formatKamas(spin.jackpotWin)}` : ""}
             </div>
           </div>
           <div>
@@ -2395,6 +2448,41 @@ function renderSlotHistory(slotState) {
             </div>
           </div>
         </div>
+      `,
+    )
+    .join("");
+}
+
+function renderSlotMachineLobby(slotState) {
+  const machines = slotState?.machines || [];
+
+  if (!machines.length) {
+    elements.slotMachineList.innerHTML = `<div class="empty-state">Aucune machine disponible.</div>`;
+    return;
+  }
+
+  elements.slotMachineList.innerHTML = machines
+    .map(
+      (machine) => `
+        <button
+          class="poker-table-card slot-machine-card ${machine.isSelected ? "active" : ""} accent-${escapeHtml(machine.accent || "gold")}"
+          type="button"
+          data-slot-machine="${escapeHtml(machine.slug)}"
+          ${machine.occupiedByOther ? "disabled" : ""}
+        >
+          <div class="poker-table-card-head">
+            <div>
+              <strong>${escapeHtml(machine.name)}</strong>
+              <div class="bet-meta">${escapeHtml(machine.vibe || "")}</div>
+            </div>
+            <span class="status-pill">${escapeHtml(machine.statusLabel)}</span>
+          </div>
+          <div class="poker-table-card-meta">
+            <span>Jackpot ${formatKamas(machine.jackpotAmount)}</span>
+            <span>${machine.occupiedByMe ? "Toi" : machine.occupiedByOther ? escapeHtml(machine.occupiedUsername || "Occupee") : "Libre"}</span>
+          </div>
+          <div class="bet-meta">${escapeHtml(machine.description || "")}</div>
+        </button>
       `,
     )
     .join("");
@@ -2425,17 +2513,32 @@ function renderSlots() {
   const slotState = getSlotsState();
 
   if (!slotState) {
+    elements.slotMachineTitle.textContent = "Portes du Dofus";
+    elements.slotJackpotBadge.textContent = "Jackpot 0 kamas";
+    elements.slotMachineStatusValue.textContent = "Chargement";
+    elements.slotMachineOwnerValue.textContent = "Personne";
     elements.slotModeBadge.textContent = "Chargement";
     elements.slotStatusText.textContent = "La machine a sous se charge...";
     elements.slotSimpleNote.textContent = "Lecture des configurations serveur.";
+    elements.slotMachineList.innerHTML = `<div class="empty-state">Chargement des machines...</div>`;
     elements.slotHistoryList.innerHTML = `<div class="empty-state">Chargement...</div>`;
     renderSlotGrid(null);
+    elements.slotClaimButton.disabled = true;
+    elements.slotReleaseButton.disabled = true;
     elements.slotSpinButton.disabled = true;
     return;
   }
 
   const bonus = getSlotActiveBonus();
-  const latestSpin = state.slotLastSpinResult || slotState.recentSpins?.[0] || null;
+  const currentMachine = getSlotCurrentMachine();
+  const latestSpin =
+    [
+      state.slotLastSpinResult,
+      ...(slotState.recentSpins || []),
+    ].find((spin) => spin?.machineSlug === currentMachine?.slug)
+    || state.slotLastSpinResult
+    || slotState.recentSpins?.[0]
+    || null;
   const latestSummary = latestSpin?.summary || null;
   const isBonus = bonus.freeSpinsRemaining > 0;
 
@@ -2443,6 +2546,16 @@ function renderSlots() {
     state.selectedSlotBet = Number(slotState.config.minBet);
   }
 
+  elements.slotMachineTitle.textContent = currentMachine?.name || "Portes du Dofus";
+  elements.slotJackpotBadge.textContent = `Jackpot ${formatKamas(currentMachine?.jackpotAmount || 0)}`;
+  elements.slotMachineStatusValue.textContent = currentMachine?.occupiedByMe
+    ? "Ta machine"
+    : currentMachine?.occupiedByOther
+      ? "Occupee"
+      : "Libre";
+  elements.slotMachineOwnerValue.textContent = currentMachine?.occupiedByMe
+    ? "Toi"
+    : currentMachine?.occupiedUsername || "Personne";
   elements.slotModeBadge.textContent = isBonus ? "Free spins actifs" : "Base game";
   elements.slotPaylineValue.textContent = `${slotState.config.paylines} lignes`;
   elements.slotLastWinValue.textContent = formatKamas(latestSpin?.totalWin || 0);
@@ -2456,25 +2569,43 @@ function renderSlots() {
         : latestSummary.nearMiss
           ? "Deux scatters, le bonus etait tout proche."
           : latestSummary.hit
-            ? `${formatKamas(latestSummary.totalWin)} tombent sur ce spin.`
+            ? `${formatKamas(latestSummary.totalWin)} tombent sur ce spin.${latestSummary.jackpotWin > 0 ? ` Jackpot ${formatKamas(latestSummary.jackpotWin)}.` : ""}`
             : "Rien sur ce spin, les rouleaux repartent."
     : "La machine attend ton premier spin.";
   elements.slotSimpleNote.textContent =
     bonus.freeSpinsRemaining > 0
-      ? `Free spins en cours a ${formatKamas(bonus.lockedBet)} avec multiplicateur progressif.`
-      : "Choisis ta mise puis lance. 3 scatters declenchent les free spins.";
+      ? `Free spins en cours sur ${currentMachine?.name || "ta machine"} a ${formatKamas(bonus.lockedBet)} avec multiplicateur progressif.`
+      : `Choisis ta machine. Chaque spin ajoute ${formatKamas(slotState.config.jackpotIncrement || 0)} au jackpot de la borne.`;
 
   syncSlotBetInput();
   buildSlotBetPresets();
+  renderSlotMachineLobby(slotState);
   renderSlotGrid();
   renderSlotCascadeTrail(latestSummary);
   renderSlotHistory(slotState);
 
-  elements.slotSpinButton.disabled = state.isSubmittingSlotSpin || state.isSubmittingSlotSeed;
+  elements.slotClaimButton.disabled =
+    state.isSubmittingSlotMachine
+    || state.isSubmittingSlotSpin
+    || state.isSubmittingSlotSeed
+    || !currentMachine
+    || currentMachine.occupiedByMe
+    || currentMachine.occupiedByOther;
+  elements.slotReleaseButton.disabled =
+    state.isSubmittingSlotMachine
+    || state.isSubmittingSlotSpin
+    || state.isSubmittingSlotSeed
+    || !currentMachine?.occupiedByMe
+    || bonus.freeSpinsRemaining > 0;
+  elements.slotSpinButton.disabled =
+    state.isSubmittingSlotMachine
+    || state.isSubmittingSlotSpin
+    || state.isSubmittingSlotSeed
+    || !currentMachine?.occupiedByMe;
   elements.slotSpinButton.textContent = isBonus ? "Lancer le free spin" : "Lancer";
 }
 
-async function loadSlotsState(showToastOnError = false) {
+async function loadSlotsState(showToastOnError = false, machineSlug = getSelectedSlotMachineSlug()) {
   if (!state.me || state.isLoadingSlotsView) {
     return;
   }
@@ -2483,8 +2614,11 @@ async function loadSlotsState(showToastOnError = false) {
   renderSlots();
 
   try {
-    const payload = await api("/api/slots/state");
+    const payload = await api(`/api/slots/state${slotMachineQuery(machineSlug)}`);
     state.slots = payload.slots;
+    state.selectedSlotMachineSlug =
+      payload.slots?.selectedMachineSlug || state.selectedSlotMachineSlug || machineSlug || null;
+    state.slotLastSpinResult = payload.slots?.recentSpins?.[0] || null;
     if (!state.selectedSlotBet) {
       state.selectedSlotBet = Number(payload.slots?.config?.minBet || 100000);
     }
@@ -2496,6 +2630,92 @@ async function loadSlotsState(showToastOnError = false) {
     }
   } finally {
     state.isLoadingSlotsView = false;
+    renderSlots();
+  }
+}
+
+function onSlotMachineListClick(event) {
+  const selector = event.target.closest("[data-slot-machine]");
+  if (!selector) {
+    return;
+  }
+
+  const machineSlug = selector.dataset.slotMachine;
+  state.selectedSlotMachineSlug = machineSlug;
+  const machine = getSlotsState()?.machines?.find((entry) => entry.slug === machineSlug);
+
+  if (machine?.occupiedByOther) {
+    showToast("Cette machine est deja occupee.", "error");
+    return;
+  }
+
+  if (machine?.occupiedByMe) {
+    renderSlots();
+    return;
+  }
+
+  claimSelectedSlotMachine();
+}
+
+async function claimSelectedSlotMachine() {
+  if (!state.me || state.isSubmittingSlotMachine || !getSelectedSlotMachineSlug()) {
+    return;
+  }
+
+  state.isSubmittingSlotMachine = true;
+  renderSlots();
+
+  try {
+    const payload = await api("/api/slots/machine/select", {
+      method: "POST",
+      body: JSON.stringify({
+        machineSlug: getSelectedSlotMachineSlug(),
+      }),
+    });
+
+    state.me = payload.user || state.me;
+    state.slots = payload.slots;
+    state.selectedSlotMachineSlug =
+      payload.slots?.selectedMachineSlug || getSelectedSlotMachineSlug();
+    state.slotLastSpinResult = payload.slots?.recentSpins?.[0] || state.slotLastSpinResult;
+    renderMetrics();
+    renderSlots();
+    showToast(payload.message, "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.isSubmittingSlotMachine = false;
+    renderSlots();
+  }
+}
+
+async function releaseSelectedSlotMachine() {
+  if (!state.me || state.isSubmittingSlotMachine) {
+    return;
+  }
+
+  state.isSubmittingSlotMachine = true;
+  renderSlots();
+
+  try {
+    const payload = await api("/api/slots/machine/release", {
+      method: "POST",
+      body: JSON.stringify({
+        machineSlug: getSelectedSlotMachineSlug(),
+      }),
+    });
+
+    state.slots = payload.slots;
+    state.selectedSlotMachineSlug =
+      payload.slots?.selectedMachineSlug || state.selectedSlotMachineSlug;
+    state.slotLastSpinResult = payload.slots?.recentSpins?.[0] || state.slotLastSpinResult;
+    renderMetrics();
+    renderSlots();
+    showToast(payload.message, "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.isSubmittingSlotMachine = false;
     renderSlots();
   }
 }
@@ -2553,12 +2773,23 @@ async function animateSlotResult(summary) {
 }
 
 async function submitSlotSpin() {
-  if (!state.me || state.isSubmittingSlotSpin || state.isSubmittingSlotSeed) {
+  if (
+    !state.me
+    || state.isSubmittingSlotMachine
+    || state.isSubmittingSlotSpin
+    || state.isSubmittingSlotSeed
+  ) {
     return;
   }
 
   const slotConfig = getSlotConfig();
+  const currentMachine = getSlotCurrentMachine();
   if (!slotConfig) {
+    return;
+  }
+
+  if (!currentMachine?.occupiedByMe) {
+    showToast("Prends une machine avant de lancer les rouleaux.", "error");
     return;
   }
 
@@ -2575,12 +2806,15 @@ async function submitSlotSpin() {
     const payload = await api("/api/slots/spin", {
       method: "POST",
       body: JSON.stringify({
+        machineSlug: getSelectedSlotMachineSlug(),
         betAmount,
       }),
     });
 
     state.me = payload.user;
     state.slots = payload.slots;
+    state.selectedSlotMachineSlug =
+      payload.slots?.selectedMachineSlug || state.selectedSlotMachineSlug;
     state.slotLastSpinResult = payload.spinResult;
     await animateSlotResult(payload.spinResult.summary);
     renderMetrics();
@@ -2625,11 +2859,14 @@ async function onSlotClientSeedSubmit(event) {
     const payload = await api("/api/slots/seed", {
       method: "POST",
       body: JSON.stringify({
+        machineSlug: getSelectedSlotMachineSlug(),
         clientSeed: elements.slotClientSeedInput.value,
       }),
     });
 
     state.slots = payload.slots;
+    state.selectedSlotMachineSlug =
+      payload.slots?.selectedMachineSlug || state.selectedSlotMachineSlug;
     renderSlots();
     showToast(payload.message, "success");
   } catch (error) {
@@ -2652,11 +2889,14 @@ async function rotateSlotSeedPair() {
     const payload = await api("/api/slots/seed/rotate", {
       method: "POST",
       body: JSON.stringify({
+        machineSlug: getSelectedSlotMachineSlug(),
         clientSeed: elements.slotClientSeedInput.value,
       }),
     });
 
     state.slots = payload.slots;
+    state.selectedSlotMachineSlug =
+      payload.slots?.selectedMachineSlug || state.selectedSlotMachineSlug;
     renderSlots();
     showToast(payload.message, "success");
   } catch (error) {
@@ -2691,11 +2931,8 @@ function setActiveView(view) {
   elements.slotsView.classList.toggle("hidden", state.activeView !== "slots");
 
   if (state.activeView === "slots" && state.me && !state.isLoadingSlotsView) {
-    if (!state.slots) {
-      loadSlotsState(false);
-    } else {
-      renderSlots();
-    }
+    renderSlots();
+    loadSlotsState(false, getSelectedSlotMachineSlug());
   }
 
   if (state.activeView === "connect4") {
@@ -2838,6 +3075,10 @@ function getSelectedPokerTableSlug() {
 
 function pokerTableQuery(tableSlug = getSelectedPokerTableSlug()) {
   return tableSlug ? `?table=${encodeURIComponent(tableSlug)}` : "";
+}
+
+function slotMachineQuery(machineSlug = getSelectedSlotMachineSlug()) {
+  return machineSlug ? `?machine=${encodeURIComponent(machineSlug)}` : "";
 }
 
 function formatPokerStatus(status) {
@@ -3115,8 +3356,8 @@ function renderPoker() {
     elements.pokerTableTitle.textContent = "Table d'Amakna";
     elements.pokerTableVibe.textContent = "Table centrale";
     elements.pokerTableDescription.textContent = "Chargement du salon poker...";
-    elements.pokerBuyInValue.textContent = formatKamas(10000000);
-    elements.pokerBlindValue.textContent = "200 000 / 400 000";
+    elements.pokerBuyInValue.textContent = formatKamas(1000000);
+    elements.pokerBlindValue.textContent = "20 000 / 40 000";
     elements.pokerStatusValue.textContent = "En attente";
     elements.pokerPhaseValue.textContent = "--";
     elements.pokerPotValue.textContent = formatKamas(0);
@@ -3846,7 +4087,7 @@ async function onRoundResolved(round, playerSpin, lastNumbers = null) {
       );
     } else {
       showToast(
-        `Round #${round.roundKey}: ${round.resultNumber} ${formatRoundColor(round.resultColor)}`,
+        `${round.displayLabel || `#${round.roundKey}`}: ${round.resultNumber} ${formatRoundColor(round.resultColor)}`,
         "info",
       );
     }
@@ -3982,7 +4223,7 @@ function animateWheel(targetIndex) {
 
 function openResultModal(round, playerSpin) {
   elements.resultTitle.textContent = playerSpin.netResult >= 0 ? "Victoire" : "Defaite";
-  elements.resultSubtitle.textContent = `La manche #${round.roundKey} tombe sur le ${round.resultNumber} ${formatRoundColor(round.resultColor)}.`;
+  elements.resultSubtitle.textContent = `La manche ${round.displayLabel || `#${round.roundKey}`} tombe sur le ${round.resultNumber} ${formatRoundColor(round.resultColor)}.`;
   elements.resultMeta.innerHTML = `
     <div class="result-row">
       <span>Total mise</span>

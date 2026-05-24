@@ -532,6 +532,23 @@ textarea:focus {
   align-items: start;
 }
 
+.slot-machine-list {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.slot-machine-card {
+  text-align: left;
+}
+
+.slot-machine-card:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .slot-stage {
   position: relative;
   display: grid;
@@ -679,6 +696,12 @@ textarea:focus {
   border-radius: 24px;
   border: 1px solid rgba(216, 181, 102, 0.1);
   background: rgba(9, 8, 8, 0.54);
+}
+
+.slot-occupancy-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
 }
 
 .slot-control-head {
@@ -1264,8 +1287,8 @@ textarea:focus {
 }
 
 .poker-card {
-  width: 60px;
-  min-height: 88px;
+  width: 48px;
+  min-height: 72px;
   display: grid;
   place-items: center;
   border-radius: 16px;
@@ -1278,7 +1301,7 @@ textarea:focus {
 
 .poker-card span {
   font-family: var(--display-font);
-  font-size: 1.08rem;
+  font-size: 0.94rem;
   color: #1c1711;
 }
 
@@ -1334,8 +1357,8 @@ textarea:focus {
   position: absolute;
   display: grid;
   gap: 4px;
-  width: 164px;
-  padding: 10px 12px;
+  width: 154px;
+  padding: 9px 11px;
   border-radius: 16px;
   border: 1px solid rgba(216, 181, 102, 0.1);
   background: rgba(9, 11, 8, 0.3);
@@ -1364,7 +1387,7 @@ textarea:focus {
 
 .poker-seat.seat-1,
 .poker-seat.seat-4 {
-  width: 144px;
+  width: 136px;
 }
 
 .poker-seat.seat-1 {
@@ -1436,19 +1459,19 @@ textarea:focus {
 }
 
 .poker-seat-cards .poker-card {
-  width: 34px;
-  min-height: 48px;
+  width: 28px;
+  min-height: 40px;
   border-radius: 10px;
 }
 
 .poker-hero-cards {
-  min-height: 88px;
+  min-height: 72px;
 }
 
 .poker-hero-panel .poker-card {
-  width: 56px;
-  min-height: 82px;
-  border-radius: 16px;
+  width: 44px;
+  min-height: 66px;
+  border-radius: 14px;
 }
 
 .poker-hero-panel {
@@ -2246,6 +2269,10 @@ tr:last-child td {
     grid-template-columns: 1fr;
   }
 
+  .slot-machine-list {
+    grid-template-columns: 1fr;
+  }
+
   .poker-felt {
     min-height: auto;
     padding: 18px;
@@ -2295,6 +2322,10 @@ tr:last-child td {
     display: grid;
   }
 
+  .slot-occupancy-grid {
+    grid-template-columns: 1fr;
+  }
+
   .skribbl-toolbar,
   .skribbl-guess-form {
     grid-template-columns: 1fr;
@@ -2319,8 +2350,8 @@ tr:last-child td {
   }
 
   .poker-card {
-    width: 58px;
-    min-height: 84px;
+    width: 46px;
+    min-height: 68px;
   }
 }
 

@@ -8,6 +8,8 @@ const {
 } = require("../server/middleware");
 const {
   buildSlotState,
+  claimSlotMachine,
+  releaseSlotMachine,
   rotateSlotSeeds,
   spinSlots,
   updateSlotClientSeed,
@@ -21,7 +23,38 @@ router.get(
   asyncHandler(async (req, res) => {
     res.json({
       success: true,
-      slots: await buildSlotState(req.user.id),
+      slots: await buildSlotState(req.user.id, req.query?.machine || null),
+    });
+  }),
+);
+
+router.post(
+  "/machine/select",
+  requireAuth,
+  slotLimiter,
+  asyncHandler(async (req, res) => {
+    const payload = await claimSlotMachine(req.user.id, req.body?.machineSlug);
+
+    res.json({
+      success: true,
+      message: `Tu prends la machine ${payload.machine.name}.`,
+      user: serializeUser(payload.user),
+      slots: payload.slotState,
+    });
+  }),
+);
+
+router.post(
+  "/machine/release",
+  requireAuth,
+  slotLimiter,
+  asyncHandler(async (req, res) => {
+    const payload = await releaseSlotMachine(req.user.id, req.body?.machineSlug);
+
+    res.json({
+      success: true,
+      message: "Tu laisses la machine a sous libre.",
+      slots: payload.slotState,
     });
   }),
 );
@@ -32,7 +65,7 @@ router.post(
   slotLimiter,
   slotCooldown,
   asyncHandler(async (req, res) => {
-    const payload = await spinSlots(req.user.id, req.body?.betAmount);
+    const payload = await spinSlots(req.user.id, req.body?.machineSlug, req.body?.betAmount);
 
     res.json({
       success: true,
@@ -52,7 +85,11 @@ router.post(
   requireAuth,
   slotLimiter,
   asyncHandler(async (req, res) => {
-    const slots = await updateSlotClientSeed(req.user.id, req.body?.clientSeed);
+    const slots = await updateSlotClientSeed(
+      req.user.id,
+      req.body?.clientSeed,
+      req.body?.machineSlug,
+    );
 
     res.json({
       success: true,
@@ -67,7 +104,11 @@ router.post(
   requireAuth,
   slotLimiter,
   asyncHandler(async (req, res) => {
-    const slots = await rotateSlotSeeds(req.user.id, req.body?.clientSeed);
+    const slots = await rotateSlotSeeds(
+      req.user.id,
+      req.body?.clientSeed,
+      req.body?.machineSlug,
+    );
 
     res.json({
       success: true,
