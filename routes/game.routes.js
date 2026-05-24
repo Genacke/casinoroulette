@@ -22,6 +22,7 @@ const {
   getRecentRoundNumbers,
   setPlayerTicket,
 } = require("../server/rounds");
+const { buildPokerState } = require("../server/poker");
 const { normalizeMessage, parsePositiveInteger } = require("../server/utils");
 
 const router = express.Router();
@@ -147,9 +148,28 @@ async function getNotifications(userId) {
 }
 
 function mapCashoutRequest(row) {
+  const feePercent = Number(
+    row.feePercent === undefined || row.feePercent === null
+      ? config.cashoutFeePercent
+      : row.feePercent,
+  );
+  const feeAmount = Number(
+    row.feeAmount === undefined || row.feeAmount === null
+      ? Math.floor((Number(row.amount) * feePercent) / 100)
+      : row.feeAmount,
+  );
+  const netAmount = Number(
+    row.netAmount === undefined || row.netAmount === null
+      ? Math.max(0, Number(row.amount) - feeAmount)
+      : row.netAmount,
+  );
+
   return {
     id: Number(row.id),
     amount: Number(row.amount),
+    feePercent,
+    feeAmount,
+    netAmount,
     note: row.note || "",
     status: row.status,
     adminNote: row.adminNote || "",
@@ -166,6 +186,9 @@ async function getCashoutRequests(userId, limit = 8) {
       SELECT
         id,
         amount,
+        fee_percent AS feePercent,
+        fee_amount AS feeAmount,
+        net_amount AS netAmount,
         note,
         status,
         admin_note AS adminNote,
@@ -184,7 +207,7 @@ async function getCashoutRequests(userId, limit = 8) {
 }
 
 async function getPlayerBootstrap(userId) {
-  const [roundState, stats, history, leaderboard, chat, notifications, cashoutRequests] =
+  const [roundState, stats, history, leaderboard, chat, notifications, cashoutRequests, poker] =
     await Promise.all([
       buildRoundState(userId),
       getPlayerStats(userId),
@@ -193,6 +216,7 @@ async function getPlayerBootstrap(userId) {
       getChatMessages(),
       getNotifications(userId),
       getCashoutRequests(userId),
+      buildPokerState(userId),
     ]);
 
   return {
@@ -211,6 +235,10 @@ async function getPlayerBootstrap(userId) {
     latestResolvedRound: roundState.latestResolvedRound,
     latestPlayerSpin: roundState.latestPlayerSpin,
     serverTime: roundState.serverTime,
+    poker,
+    cashout: {
+      feePercent: config.cashoutFeePercent,
+    },
     roulette: {
       wheelOrder: WHEEL_ORDER,
       houseEdgePercent: config.houseEdgePercent,
@@ -242,8 +270,11 @@ router.get(
   "/round-state",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const roundState = await buildRoundState(req.user.id);
-    const cashoutRequests = await getCashoutRequests(req.user.id);
+    const [roundState, cashoutRequests, poker] = await Promise.all([
+      buildRoundState(req.user.id),
+      getCashoutRequests(req.user.id),
+      buildPokerState(req.user.id),
+    ]);
 
     res.json({
       success: true,
@@ -257,6 +288,7 @@ router.get(
       cashoutRequests,
       pendingCashoutRequest:
         cashoutRequests.find((request) => request.status === "pending") || null,
+      poker,
     });
   }),
 );
@@ -378,7 +410,7 @@ router.post(
 
     res.status(201).json({
       success: true,
-      message: "Demande de cash out envoyee au staff.",
+      message: `Demande de retrait envoyee au staff avec ${config.cashoutFeePercent}% de commission.`,
       user: serializeUser(requestState.user),
       notifications,
       cashoutRequests,
@@ -500,6 +532,9 @@ router.delete(
 async function requireCashoutRequestCreation(userId, amount, note) {
   return requireCashoutMutation(async () => {
     const user = await get("SELECT * FROM users WHERE id = ?", [userId]);
+    const feePercent = config.cashoutFeePercent;
+    const feeAmount = Math.floor((amount * feePercent) / 100);
+    const netAmount = Math.max(0, amount - feeAmount);
 
     if (!user) {
       throw new Error("Compte introuvable.");
@@ -530,12 +565,15 @@ async function requireCashoutRequestCreation(userId, amount, note) {
           user_id,
           username_snapshot,
           amount,
+          fee_percent,
+          fee_amount,
+          net_amount,
           note,
           status
         )
-        VALUES (?, ?, ?, ?, 'pending')
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
       `,
-      [userId, user.username, amount, note || null],
+      [userId, user.username, amount, feePercent, feeAmount, netAmount, note || null],
     );
 
     await run(
@@ -545,7 +583,7 @@ async function requireCashoutRequestCreation(userId, amount, note) {
       `,
       [
         userId,
-        `Demande de cash out envoyee pour ${amount.toLocaleString("fr-FR")} kamas.`,
+        `Demande de retrait envoyee: ${amount.toLocaleString("fr-FR")} kamas, commission ${feePercent}% (${feeAmount.toLocaleString("fr-FR")}), net ${netAmount.toLocaleString("fr-FR")} kamas.`,
       ],
     );
 

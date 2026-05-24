@@ -5,6 +5,7 @@ Site de roulette style casino pour serveur prive Dofus, avec monnaie virtuelle e
 ## Points clefs
 
 - Roulette 0 a 36 avec couleurs rouge, noir et vert
+- Onglet poker Texas Hold'em no limit avec cave fixe
 - Resultat calcule uniquement cote serveur
 - Manches globales synchronisees pour tous les joueurs
 - Une manche ouvre toutes les 2 minutes par defaut
@@ -14,6 +15,7 @@ Site de roulette style casino pour serveur prive Dofus, avec monnaie virtuelle e
 - Credit / retrait de kamas depuis le panel admin
 - Historique des tickets, gains, manches, connexions et ajustements
 - Mise mini configurable, ticket max configurable et plafond dedie sur le numero 0
+- Commission de 2% sur les demandes de retrait validees
 - Leaderboard, stats joueur, notifications, chat et auto spin
 - Demandes de cash out joueur avec traitement admin
 - Rate limiting, anti-spam, hash des mots de passe, cookie JWT HttpOnly
@@ -53,13 +55,15 @@ Site de roulette style casino pour serveur prive Dofus, avec monnaie virtuelle e
 |-- routes/
 |   |-- admin.routes.js
 |   |-- auth.routes.js
-|   `-- game.routes.js
+|   |-- game.routes.js
+|   `-- poker.routes.js
 |-- server/
 |   |-- app.js
 |   |-- auth.js
 |   |-- config.js
 |   |-- db.js
 |   |-- middleware.js
+|   |-- poker.js
 |   |-- roulette.js
 |   |-- rounds.js
 |   `-- utils.js
@@ -91,12 +95,20 @@ Variables principales:
 - `ADMIN_USERNAME=admin`
 - `ADMIN_PASSWORD=ChangeMe123!`
 - `HOUSE_EDGE_PERCENT=2`
-- `MIN_BET=100000`
-- `MAX_BET=5000000`
-- `GREEN_MAX_BET=500000`
+- `CASHOUT_FEE_PERCENT=2`
+- `MIN_BET=200000`
+- `MAX_BET=10000000`
+- `GREEN_MAX_BET=1000000`
 - `ROUND_INTERVAL_SECONDS=120`
 - `ROUND_BET_LOCK_SECONDS=5`
 - `AUTO_SPIN_MAX_ROUNDS=25`
+- `POKER_TABLE_BUY_IN=10000000`
+- `POKER_SMALL_BLIND=200000`
+- `POKER_BIG_BLIND=400000`
+- `POKER_MIN_PLAYERS=2`
+- `POKER_MAX_PLAYERS=6`
+- `POKER_TURN_SECONDS=25`
+- `POKER_SHOWDOWN_SECONDS=8`
 
 ### 3. Creer des comptes de demo optionnels
 
@@ -148,10 +160,21 @@ npm run dev
 - Manque / passe
 - Douzaines
 
+## Poker
+
+- Format: Texas Hold'em no limit
+- Une table globale 10 000 000 kamas de cave
+- Petite blind 200 000, grosse blind 400 000 par defaut
+- La main demarre des que 2 joueurs sont assis
+- Les cartes, le board et les tours sont calcules cote serveur
+- Les joueurs ont 25 secondes pour agir avant auto-check ou auto-fold
+- Les sorties de table remettent la cave restante sur le solde du joueur
+
 ## Securite
 
 - RNG via `crypto.randomInt`
 - Validation stricte des mises cote serveur
+- Validation stricte des actions poker cote serveur
 - Verification du solde cote serveur
 - Hash des mots de passe avec `bcryptjs`
 - JWT signe en cookie HttpOnly
@@ -184,6 +207,13 @@ npm run dev
 - `POST /api/game/chat`
 - `GET /api/game/notifications`
 - `POST /api/game/notifications/read-all`
+
+### Poker
+
+- `GET /api/poker/state`
+- `POST /api/poker/join`
+- `POST /api/poker/leave`
+- `POST /api/poker/action`
 
 ### Admin
 
@@ -233,16 +263,24 @@ Le chemin le plus simple pour cette app est Railway avec le `Dockerfile` du repo
 3. Railway detectera automatiquement le `Dockerfile` et le fichier `railway.json`.
 4. Ajoute un volume persistant sur le service avec le point de montage `/data`.
 5. Renseigne les variables d'environnement:
-   - `JWT_SECRET`
-   - `ADMIN_USERNAME`
-   - `ADMIN_PASSWORD`
-   - `HOUSE_EDGE_PERCENT`
-   - `MIN_BET=100000`
-   - `MAX_BET=5000000`
-   - `GREEN_MAX_BET=500000`
-   - `ROUND_INTERVAL_SECONDS=120`
-   - `ROUND_BET_LOCK_SECONDS=5`
-   - `AUTO_SPIN_MAX_ROUNDS=25`
+- `JWT_SECRET`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+- `HOUSE_EDGE_PERCENT`
+- `CASHOUT_FEE_PERCENT=2`
+- `MIN_BET=200000`
+- `MAX_BET=10000000`
+- `GREEN_MAX_BET=1000000`
+- `ROUND_INTERVAL_SECONDS=120`
+- `ROUND_BET_LOCK_SECONDS=5`
+- `AUTO_SPIN_MAX_ROUNDS=25`
+- `POKER_TABLE_BUY_IN=10000000`
+- `POKER_SMALL_BLIND=200000`
+- `POKER_BIG_BLIND=400000`
+- `POKER_MIN_PLAYERS=2`
+- `POKER_MAX_PLAYERS=6`
+- `POKER_TURN_SECONDS=25`
+- `POKER_SHOWDOWN_SECONDS=8`
 6. Optionnel: fixe `DB_PATH=/data/casino.sqlite` si tu veux un chemin explicite.
    Sinon l'application utilisera automatiquement `RAILWAY_VOLUME_MOUNT_PATH` quand le volume est attache.
 7. Deploy.

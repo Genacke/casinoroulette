@@ -232,6 +232,9 @@ function renderPendingCashoutRequests(requests) {
             <span class="status-pill">${formatKamas(request.amount)}</span>
           </div>
           <div class="bet-meta">Solde actuel: ${formatKamas(request.currentBalance)}</div>
+          <div class="bet-meta">
+            Commission ${request.feePercent}%: ${formatKamas(request.feeAmount)} - a remettre ${formatKamas(request.netAmount)}
+          </div>
           ${
             request.note
               ? `<div class="bet-meta">Note joueur: ${escapeHtml(request.note)}</div>`
@@ -526,7 +529,9 @@ function renderLogs(type, rows) {
         <thead>
           <tr>
             <th>Joueur</th>
-            <th>Montant</th>
+            <th>Brut</th>
+            <th>Commission</th>
+            <th>Net</th>
             <th>Statut</th>
             <th>Note joueur</th>
             <th>Note admin</th>
@@ -542,6 +547,8 @@ function renderLogs(type, rows) {
                 <tr>
                   <td>${escapeHtml(row.username)}</td>
                   <td>${formatKamas(row.amount)}</td>
+                  <td>${formatKamas(row.feeAmount)}</td>
+                  <td>${formatKamas(row.netAmount)}</td>
                   <td>${escapeHtml(row.status)}</td>
                   <td>${escapeHtml(row.note || "-")}</td>
                   <td>${escapeHtml(row.adminNote || "-")}</td>

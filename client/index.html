@@ -39,10 +39,13 @@
 
           <div class="feature-list">
             <div class="feature-chip">Roulette 0-36</div>
+            <div class="feature-chip">Poker Texas Hold'em</div>
             <div class="feature-chip">Rounds toutes les 2 min</div>
-            <div class="feature-chip">Mise mini 100 000</div>
-            <div class="feature-chip">Ticket max 5 000 000</div>
-            <div class="feature-chip">0 plafonne a 500 000</div>
+            <div class="feature-chip">Mise mini 200 000</div>
+            <div class="feature-chip">Ticket max 10 000 000</div>
+            <div class="feature-chip">0 plafonne a 1 000 000</div>
+            <div class="feature-chip">Table poker 10 000 000</div>
+            <div class="feature-chip">Retrait -2%</div>
             <div class="feature-chip">Auto spin</div>
             <div class="feature-chip">Chat de taverne</div>
           </div>
@@ -85,7 +88,7 @@
         </article>
       </section>
 
-      <main id="playerApp" class="app-grid hidden">
+      <main id="playerApp" class="player-shell hidden">
         <section class="panel metrics-panel">
           <div class="metric-card">
             <span>Solde</span>
@@ -105,177 +108,322 @@
           </div>
         </section>
 
-        <section class="panel wheel-panel">
+        <section class="panel game-switch-panel">
           <div class="panel-header">
             <div>
-              <p class="eyebrow">Table centrale</p>
-              <h3>Roue des Kamas</h3>
+              <p class="eyebrow">Tables de jeu</p>
+              <h3>Choisis ton format</h3>
             </div>
-            <div class="last-numbers" id="lastNumbers"></div>
           </div>
-
-          <div class="wheel-stage">
-            <canvas id="rouletteCanvas" width="620" height="620" aria-label="Roulette"></canvas>
-            <div class="wheel-pointer"></div>
-            <div class="wheel-core"></div>
-          </div>
-
-          <div class="round-status-board">
-            <div class="ticket-info">
-              <span>Manche en cours</span>
-              <strong id="roundLabel">--</strong>
-            </div>
-            <div class="ticket-info">
-              <span>Fin des mises</span>
-              <strong id="roundTimerValue">--:--</strong>
-            </div>
-            <div class="ticket-info">
-              <span>Etat</span>
-              <strong id="roundStatusValue">En attente</strong>
-            </div>
-            <div class="ticket-info">
-              <span>Ticket confirme</span>
-              <strong id="confirmedTicketValue">0 kamas</strong>
-            </div>
+          <div class="tab-row game-tab-row">
+            <button id="viewRouletteButton" class="tab-button active" type="button">
+              Roulette
+            </button>
+            <button id="viewPokerButton" class="tab-button" type="button">
+              Poker
+            </button>
           </div>
         </section>
 
-        <section class="panel bet-panel">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Ticket d'aventurier</p>
-              <h3>Mises rapides</h3>
-            </div>
+        <div class="player-layout">
+          <div class="game-stack">
+            <section id="rouletteView" class="roulette-grid game-view">
+              <section class="panel wheel-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Table centrale</p>
+                    <h3>Roue des Kamas</h3>
+                  </div>
+                  <div class="last-numbers" id="lastNumbers"></div>
+                </div>
+
+                <div class="wheel-stage">
+                  <canvas id="rouletteCanvas" width="620" height="620" aria-label="Roulette"></canvas>
+                  <div class="wheel-pointer"></div>
+                  <div class="wheel-core"></div>
+                </div>
+
+                <div class="round-status-board">
+                  <div class="ticket-info">
+                    <span>Manche en cours</span>
+                    <strong id="roundLabel">--</strong>
+                  </div>
+                  <div class="ticket-info">
+                    <span>Fin des mises</span>
+                    <strong id="roundTimerValue">--:--</strong>
+                  </div>
+                  <div class="ticket-info">
+                    <span>Etat</span>
+                    <strong id="roundStatusValue">En attente</strong>
+                  </div>
+                  <div class="ticket-info">
+                    <span>Ticket confirme</span>
+                    <strong id="confirmedTicketValue">0 kamas</strong>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel bet-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Ticket d'aventurier</p>
+                    <h3>Mises rapides</h3>
+                  </div>
+                </div>
+
+                <div id="betRulesSummary" class="bet-rules-summary"></div>
+                <div id="probabilityCards" class="probability-grid"></div>
+
+                <div class="spin-controls">
+                  <div class="ticket-info">
+                    <span>Brouillon</span>
+                    <strong id="ticketTotal">0 kamas</strong>
+                  </div>
+
+                  <div class="spin-actions">
+                    <button id="spinButton" class="primary-button">Valider</button>
+                    <button id="clearBetsButton" class="ghost-button">Vider</button>
+                    <button id="cancelTicketButton" class="ghost-button">Annuler</button>
+                  </div>
+
+                  <div class="auto-spin-box">
+                    <label>
+                      <span>Auto spin</span>
+                      <input id="autoSpinRounds" type="number" min="1" max="25" value="5" />
+                    </label>
+                    <button id="autoSpinButton" class="secondary-button">Demarrer</button>
+                    <button id="stopAutoSpinButton" class="ghost-button">Stop</button>
+                  </div>
+                </div>
+
+                <div id="chipRow" class="chip-row"></div>
+
+                <div class="bet-shortcuts">
+                  <button class="bet-shortcut red" data-bet-type="color" data-bet-value="red">Rouge</button>
+                  <button class="bet-shortcut black" data-bet-type="color" data-bet-value="black">Noir</button>
+                  <button class="bet-shortcut neutral" data-bet-type="parity" data-bet-value="even">Pair</button>
+                  <button class="bet-shortcut neutral" data-bet-type="parity" data-bet-value="odd">Impair</button>
+                  <button class="bet-shortcut neutral" data-bet-type="range" data-bet-value="manque">1-18</button>
+                  <button class="bet-shortcut neutral" data-bet-type="range" data-bet-value="passe">19-36</button>
+                  <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="1">D1</button>
+                  <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="2">D2</button>
+                  <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="3">D3</button>
+                </div>
+
+                <div id="numberGrid" class="numbers-grid"></div>
+
+                <div class="ticket-layout">
+                  <div>
+                    <div class="section-title">Ticket en preparation</div>
+                    <div id="betSlip" class="bet-slip"></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel history-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Carnet de route</p>
+                    <h3>Historique des mises</h3>
+                  </div>
+                </div>
+                <div id="historyList" class="history-list"></div>
+              </section>
+            </section>
+
+            <section id="pokerView" class="poker-grid game-view hidden">
+              <section class="panel poker-table-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Table Texas Hold'em</p>
+                    <h3 id="pokerTableTitle">Table des 10M</h3>
+                  </div>
+                  <div class="poker-action-cluster">
+                    <button id="joinPokerButton" class="secondary-button" type="button">
+                      Rejoindre
+                    </button>
+                    <button id="leavePokerButton" class="ghost-button" type="button">
+                      Quitter
+                    </button>
+                  </div>
+                </div>
+
+                <div class="poker-summary-grid">
+                  <div class="ticket-info">
+                    <span>Cave fixe</span>
+                    <strong id="pokerBuyInValue">0 kamas</strong>
+                  </div>
+                  <div class="ticket-info">
+                    <span>Blinds</span>
+                    <strong id="pokerBlindValue">0 / 0</strong>
+                  </div>
+                  <div class="ticket-info">
+                    <span>Etat</span>
+                    <strong id="pokerStatusValue">En attente</strong>
+                  </div>
+                  <div class="ticket-info">
+                    <span>Phase</span>
+                    <strong id="pokerPhaseValue">--</strong>
+                  </div>
+                  <div class="ticket-info">
+                    <span>Pot</span>
+                    <strong id="pokerPotValue">0 kamas</strong>
+                  </div>
+                  <div class="ticket-info">
+                    <span>Tour / compte</span>
+                    <strong id="pokerTurnValue">--</strong>
+                  </div>
+                </div>
+
+                <div class="poker-board-panel">
+                  <div class="section-title">Board</div>
+                  <div id="pokerBoard" class="poker-board"></div>
+                  <div id="pokerWinnerSummary" class="poker-winner-summary">
+                    En attente du prochain duel.
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel poker-seats-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Sieges</p>
+                    <h3>Joueurs autour de la table</h3>
+                  </div>
+                  <div class="status-pill" id="pokerPlayersNeeded">2 joueurs pour lancer</div>
+                </div>
+                <div id="pokerSeatGrid" class="poker-seat-grid"></div>
+              </section>
+
+              <section class="panel poker-actions-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Ta main</p>
+                    <h3 id="pokerMeStatus">Pas assis a la table</h3>
+                  </div>
+                </div>
+
+                <div id="pokerHeroCards" class="poker-hero-cards"></div>
+
+                <div class="poker-action-bar">
+                  <button id="pokerFoldButton" class="ghost-button" type="button">Fold</button>
+                  <button id="pokerCheckCallButton" class="primary-button" type="button">
+                    Check
+                  </button>
+                  <label class="poker-raise-box">
+                    <span>Relance a</span>
+                    <input id="pokerRaiseAmount" type="number" min="0" step="1" />
+                  </label>
+                  <button id="pokerRaiseButton" class="secondary-button" type="button">
+                    Relancer
+                  </button>
+                </div>
+
+                <div id="pokerActionHint" class="bet-meta">
+                  Rejoins la table pour recevoir deux cartes et jouer des mains Hold'em.
+                </div>
+              </section>
+
+              <section class="panel poker-rules-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Regles</p>
+                    <h3>Table rapide</h3>
+                  </div>
+                </div>
+                <div class="poker-rules-list">
+                  <div class="feature-chip">Texas Hold'em no limit</div>
+                  <div class="feature-chip">La main part a 2 joueurs</div>
+                  <div class="feature-chip">Cave fixe 10 000 000</div>
+                  <div class="feature-chip">Petite blind 200 000</div>
+                  <div class="feature-chip">Grosse blind 400 000</div>
+                  <div class="feature-chip">Tour chronometre</div>
+                </div>
+              </section>
+
+              <section class="panel poker-log-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Journal de main</p>
+                    <h3>Dernieres actions</h3>
+                  </div>
+                </div>
+                <div id="pokerActionLog" class="history-list"></div>
+              </section>
+            </section>
           </div>
 
-          <div id="betRulesSummary" class="bet-rules-summary"></div>
-          <div id="probabilityCards" class="probability-grid"></div>
+          <section class="panel side-panel shared-side-panel">
+            <div class="side-stack">
+              <article class="sub-panel">
+                <div class="section-title">Statistiques</div>
+                <div id="statsGrid" class="stats-grid"></div>
+              </article>
 
-          <div class="spin-controls">
-            <div class="ticket-info">
-              <span>Brouillon</span>
-              <strong id="ticketTotal">0 kamas</strong>
-            </div>
+              <article class="sub-panel">
+                <div class="section-title">Demande de retrait</div>
+                <form id="cashoutRequestForm" class="cashout-form">
+                  <label>
+                    <span>Montant</span>
+                    <input
+                      id="cashoutAmount"
+                      name="amount"
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="Montant en kamas"
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>Note optionnelle</span>
+                    <input
+                      id="cashoutNote"
+                      name="note"
+                      type="text"
+                      maxlength="180"
+                      placeholder="Ex: dispo ce soir vers 21h"
+                    />
+                  </label>
+                  <div class="bet-meta">Commission staff: 2% sur chaque demande validee.</div>
+                  <button id="cashoutSubmitButton" class="secondary-button" type="submit">
+                    Demande de retrait
+                  </button>
+                </form>
+                <div id="pendingCashoutCard" class="cashout-status-card hidden"></div>
+                <div id="cashoutRequestsList" class="cashout-requests-list"></div>
+              </article>
 
-            <div class="spin-actions">
-              <button id="spinButton" class="primary-button">Valider</button>
-              <button id="clearBetsButton" class="ghost-button">Vider</button>
-              <button id="cancelTicketButton" class="ghost-button">Annuler</button>
-            </div>
+              <article class="sub-panel">
+                <div class="section-title">Top gagnants</div>
+                <div id="leaderboardList" class="leaderboard-list"></div>
+              </article>
 
-            <div class="auto-spin-box">
-              <label>
-                <span>Auto spin</span>
-                <input id="autoSpinRounds" type="number" min="1" max="25" value="5" />
-              </label>
-              <button id="autoSpinButton" class="secondary-button">Demarrer</button>
-              <button id="stopAutoSpinButton" class="ghost-button">Stop</button>
-            </div>
-          </div>
+              <article class="sub-panel">
+                <div class="section-title">Messages du croupier</div>
+                <div id="notificationList" class="notification-list"></div>
+                <button id="readNotificationsButton" class="ghost-button full-width">
+                  Tout marquer comme lu
+                </button>
+              </article>
 
-          <div id="chipRow" class="chip-row"></div>
-
-          <div class="bet-shortcuts">
-            <button class="bet-shortcut red" data-bet-type="color" data-bet-value="red">Rouge</button>
-            <button class="bet-shortcut black" data-bet-type="color" data-bet-value="black">Noir</button>
-            <button class="bet-shortcut neutral" data-bet-type="parity" data-bet-value="even">Pair</button>
-            <button class="bet-shortcut neutral" data-bet-type="parity" data-bet-value="odd">Impair</button>
-            <button class="bet-shortcut neutral" data-bet-type="range" data-bet-value="manque">1-18</button>
-            <button class="bet-shortcut neutral" data-bet-type="range" data-bet-value="passe">19-36</button>
-            <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="1">D1</button>
-            <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="2">D2</button>
-            <button class="bet-shortcut neutral" data-bet-type="dozen" data-bet-value="3">D3</button>
-          </div>
-
-          <div id="numberGrid" class="numbers-grid"></div>
-
-          <div class="ticket-layout">
-            <div>
-              <div class="section-title">Ticket en preparation</div>
-              <div id="betSlip" class="bet-slip"></div>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel history-panel">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Carnet de route</p>
-              <h3>Historique des mises</h3>
-            </div>
-          </div>
-          <div id="historyList" class="history-list"></div>
-        </section>
-
-        <section class="panel side-panel">
-          <div class="side-stack">
-            <article class="sub-panel">
-              <div class="section-title">Statistiques</div>
-              <div id="statsGrid" class="stats-grid"></div>
-            </article>
-
-            <article class="sub-panel">
-              <div class="section-title">Demande de cash out</div>
-              <form id="cashoutRequestForm" class="cashout-form">
-                <label>
-                  <span>Montant</span>
+              <article class="sub-panel chat-panel">
+                <div class="section-title">Chat de taverne</div>
+                <div id="chatMessages" class="chat-messages"></div>
+                <form id="chatForm" class="chat-form">
                   <input
-                    id="cashoutAmount"
-                    name="amount"
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="Montant en kamas"
+                    id="chatInput"
+                    type="text"
+                    maxlength="200"
+                    placeholder="Parie propre, parle propre."
                     required
                   />
-                </label>
-                <label>
-                  <span>Note optionnelle</span>
-                  <input
-                    id="cashoutNote"
-                    name="note"
-                    type="text"
-                    maxlength="180"
-                    placeholder="Ex: dispo ce soir vers 21h"
-                  />
-                </label>
-                <button id="cashoutSubmitButton" class="secondary-button" type="submit">
-                  Demande de cash out
-                </button>
-              </form>
-              <div id="pendingCashoutCard" class="cashout-status-card hidden"></div>
-              <div id="cashoutRequestsList" class="cashout-requests-list"></div>
-            </article>
-
-            <article class="sub-panel">
-              <div class="section-title">Top gagnants</div>
-              <div id="leaderboardList" class="leaderboard-list"></div>
-            </article>
-
-            <article class="sub-panel">
-              <div class="section-title">Messages du croupier</div>
-              <div id="notificationList" class="notification-list"></div>
-              <button id="readNotificationsButton" class="ghost-button full-width">
-                Tout marquer comme lu
-              </button>
-            </article>
-
-            <article class="sub-panel chat-panel">
-              <div class="section-title">Chat de taverne</div>
-              <div id="chatMessages" class="chat-messages"></div>
-              <form id="chatForm" class="chat-form">
-                <input
-                  id="chatInput"
-                  type="text"
-                  maxlength="200"
-                  placeholder="Parie propre, parle propre."
-                  required
-                />
-                <button class="secondary-button" type="submit">Envoyer</button>
-              </form>
-            </article>
-          </div>
-        </section>
+                  <button class="secondary-button" type="submit">Envoyer</button>
+                </form>
+              </article>
+            </div>
+          </section>
+        </div>
       </main>
     </div>
 

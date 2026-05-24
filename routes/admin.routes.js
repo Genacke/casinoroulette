@@ -6,6 +6,7 @@ const {
   run,
   withTransaction,
 } = require("../server/db");
+const { config } = require("../server/config");
 const {
   adminLimiter,
   asyncHandler,
@@ -108,6 +109,9 @@ async function getPendingCashoutRequests(limit = 20) {
         cashout_requests.user_id AS userId,
         cashout_requests.username_snapshot AS username,
         cashout_requests.amount,
+        cashout_requests.fee_percent AS feePercent,
+        cashout_requests.fee_amount AS feeAmount,
+        cashout_requests.net_amount AS netAmount,
         cashout_requests.note,
         cashout_requests.status,
         cashout_requests.created_at AS createdAt,
@@ -129,6 +133,9 @@ async function getRecentCashoutLogs(limit = 20) {
         cashout_requests.id,
         cashout_requests.username_snapshot AS username,
         cashout_requests.amount,
+        cashout_requests.fee_percent AS feePercent,
+        cashout_requests.fee_amount AS feeAmount,
+        cashout_requests.net_amount AS netAmount,
         cashout_requests.note,
         cashout_requests.status,
         cashout_requests.admin_note AS adminNote,
@@ -306,6 +313,17 @@ router.post(
       if (action === "complete") {
         const balanceBefore = Number(targetUser.balance);
         const balanceAfter = balanceBefore - Number(request.amount);
+        const feePercent = Number(request.fee_percent || config.cashoutFeePercent || 0);
+        const feeAmount = Number(
+          request.fee_amount === null || request.fee_amount === undefined
+            ? Math.floor((Number(request.amount) * feePercent) / 100)
+            : request.fee_amount,
+        );
+        const netAmount = Number(
+          request.net_amount === null || request.net_amount === undefined
+            ? Number(request.amount) - feeAmount
+            : request.net_amount,
+        );
 
         if (balanceAfter < 0) {
           throw new Error("Le solde actuel du joueur est insuffisant pour ce cash out.");
@@ -355,7 +373,7 @@ router.post(
           `,
           [
             targetUser.id,
-            `Ta demande de cash out de ${Number(request.amount).toLocaleString("fr-FR")} kamas a ete validee.`,
+            `Ta demande de retrait de ${Number(request.amount).toLocaleString("fr-FR")} kamas a ete validee. Commission ${feePercent}%: ${feeAmount.toLocaleString("fr-FR")} kamas. Montant a remettre en jeu: ${netAmount.toLocaleString("fr-FR")} kamas.`,
           ],
         );
       } else {

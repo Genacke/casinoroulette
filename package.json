@@ -7,7 +7,7 @@
     "dev": "node --watch server/app.js",
     "start": "node server/app.js",
     "seed": "node database/seed.js",
-    "check": "node --check server/app.js && node --check server/config.js && node --check server/db.js && node --check server/rounds.js && node --check routes/auth.routes.js && node --check routes/game.routes.js && node --check routes/admin.routes.js && node --check client/app.js && node --check admin/app.js"
+    "check": "node --check server/app.js && node --check server/config.js && node --check server/db.js && node --check server/rounds.js && node --check server/poker.js && node --check routes/auth.routes.js && node --check routes/game.routes.js && node --check routes/admin.routes.js && node --check routes/poker.routes.js && node --check client/app.js && node --check admin/app.js"
   },
   "keywords": [
     "roulette",

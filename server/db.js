@@ -218,6 +218,9 @@ async function initializeDatabase() {
       user_id INTEGER NOT NULL,
       username_snapshot TEXT NOT NULL,
       amount INTEGER NOT NULL CHECK(amount > 0),
+      fee_percent REAL NOT NULL DEFAULT 0,
+      fee_amount INTEGER NOT NULL DEFAULT 0,
+      net_amount INTEGER NOT NULL DEFAULT 0,
       note TEXT,
       status TEXT NOT NULL DEFAULT 'pending'
         CHECK(status IN ('pending', 'completed', 'rejected', 'cancelled')),
@@ -264,6 +267,65 @@ async function initializeDatabase() {
       FOREIGN KEY(resolved_spin_id) REFERENCES spins(id)
     );
 
+    CREATE TABLE IF NOT EXISTS poker_tables (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      buy_in INTEGER NOT NULL,
+      small_blind INTEGER NOT NULL,
+      big_blind INTEGER NOT NULL,
+      min_players INTEGER NOT NULL DEFAULT 2,
+      max_players INTEGER NOT NULL DEFAULT 6,
+      status TEXT NOT NULL DEFAULT 'waiting'
+        CHECK(status IN ('waiting', 'playing', 'showdown')),
+      phase TEXT NOT NULL DEFAULT 'waiting'
+        CHECK(phase IN ('waiting', 'preflop', 'flop', 'turn', 'river', 'showdown')),
+      hand_number INTEGER NOT NULL DEFAULT 0,
+      pot INTEGER NOT NULL DEFAULT 0,
+      current_bet INTEGER NOT NULL DEFAULT 0,
+      min_raise INTEGER NOT NULL DEFAULT 0,
+      dealer_seat INTEGER NOT NULL DEFAULT 0,
+      active_seat INTEGER NOT NULL DEFAULT 0,
+      visible_board_count INTEGER NOT NULL DEFAULT 0,
+      board_cards TEXT NOT NULL DEFAULT '[]',
+      winner_summary TEXT,
+      action_deadline TEXT,
+      next_hand_at TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS poker_seats (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      table_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      seat_no INTEGER NOT NULL,
+      stack INTEGER NOT NULL DEFAULT 0,
+      seat_state TEXT NOT NULL DEFAULT 'seated'
+        CHECK(seat_state IN ('seated', 'active', 'folded', 'all_in', 'busted')),
+      round_bet INTEGER NOT NULL DEFAULT 0,
+      hand_contribution INTEGER NOT NULL DEFAULT 0,
+      acted_this_round INTEGER NOT NULL DEFAULT 0,
+      hole_cards TEXT NOT NULL DEFAULT '[]',
+      joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(table_id) REFERENCES poker_tables(id),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS poker_action_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      table_id INTEGER NOT NULL,
+      hand_number INTEGER NOT NULL DEFAULT 0,
+      user_id INTEGER,
+      username_snapshot TEXT NOT NULL,
+      action_type TEXT NOT NULL,
+      amount INTEGER NOT NULL DEFAULT 0,
+      details TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(table_id) REFERENCES poker_tables(id),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_spins_user_created_at
       ON spins (user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_bets_user_created_at
@@ -285,9 +347,19 @@ async function initializeDatabase() {
       ON scheduled_bets (round_id, user_id, status);
     CREATE INDEX IF NOT EXISTS idx_scheduled_bets_user_status
       ON scheduled_bets (user_id, status, created_at DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_poker_seats_table_user
+      ON poker_seats (table_id, user_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_poker_seats_table_seat
+      ON poker_seats (table_id, seat_no);
+    CREATE INDEX IF NOT EXISTS idx_poker_action_logs_table_created
+      ON poker_action_logs (table_id, created_at DESC);
   `);
 
   await ensureColumn("spins", "round_id", "INTEGER");
+  await ensureColumn("cashout_requests", "fee_percent", "REAL NOT NULL DEFAULT 0");
+  await ensureColumn("cashout_requests", "fee_amount", "INTEGER NOT NULL DEFAULT 0");
+  await ensureColumn("cashout_requests", "net_amount", "INTEGER NOT NULL DEFAULT 0");
+  await ensureColumn("poker_seats", "hand_contribution", "INTEGER NOT NULL DEFAULT 0");
   await exec(`
     CREATE INDEX IF NOT EXISTS idx_spins_round_id
       ON spins (round_id);

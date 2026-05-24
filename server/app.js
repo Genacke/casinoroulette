@@ -4,10 +4,12 @@ const helmet = require("helmet");
 const path = require("path");
 const { config } = require("./config");
 const { initializeDatabase } = require("./db");
+const { startPokerEngine } = require("./poker");
 const { startRoundEngine } = require("./rounds");
 const authRoutes = require("../routes/auth.routes");
 const gameRoutes = require("../routes/game.routes");
 const adminRoutes = require("../routes/admin.routes");
+const pokerRoutes = require("../routes/poker.routes");
 
 const app = express();
 
@@ -66,6 +68,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/game", gameRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/poker", pokerRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
@@ -85,6 +88,7 @@ app.use((error, _req, res, _next) => {
 initializeDatabase()
   .then(async () => {
     await startRoundEngine();
+    await startPokerEngine();
     app.listen(config.port, () => {
       console.log(`Roulette casino en ligne sur http://localhost:${config.port}`);
     });
