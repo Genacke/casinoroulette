@@ -101,6 +101,11 @@
     };
 
     return {
+      matchStart: async () => {
+        await playTone(420, 0.08, 0.035, "triangle");
+        await playTone(560, 0.08, 0.04, "triangle");
+        await playTone(740, 0.16, 0.045, "square");
+      },
       spin: () => playTone(240, 0.35, 0.03, "triangle"),
       win: async () => {
         await playTone(660, 0.18, 0.045, "square");

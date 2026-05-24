@@ -50,6 +50,7 @@ const state = {
   isSubmittingCashout: false,
   activeView: "roulette",
   connect4: null,
+  lastConnect4StartActionId: null,
   isSubmittingConnect4: false,
   selectedPokerTableSlug: null,
   poker: null,
@@ -314,6 +315,7 @@ function applyBootstrap(payload, options = {}) {
   state.pendingTicket = payload.pendingTicket || emptyPendingTicket(payload.currentRound?.id);
   state.cashoutRequests = payload.cashoutRequests || [];
   state.connect4 = payload.connect4 || null;
+  syncConnect4StartSoundState(state.connect4, { play: false });
   state.poker = payload.poker || null;
   state.slots = payload.slots || null;
   state.selectedPokerTableSlug =
@@ -453,6 +455,7 @@ async function logout() {
   state.pendingCashoutRequest = null;
   state.isSubmittingCashout = false;
   state.connect4 = null;
+  state.lastConnect4StartActionId = null;
   state.isSubmittingConnect4 = false;
   state.selectedPokerTableSlug = null;
   state.poker = null;
@@ -1075,6 +1078,33 @@ function describeProbability(type) {
 
 function getConnect4State() {
   return state.connect4 || state.bootstrap?.connect4 || null;
+}
+
+function getLatestConnect4StartActionId(connect4) {
+  const actions = connect4?.recentActions || [];
+
+  for (let index = actions.length - 1; index >= 0; index -= 1) {
+    const action = actions[index];
+    if (action?.actionType === "start") {
+      return action.id || `start-${action.createdAt || index}`;
+    }
+  }
+
+  return null;
+}
+
+function syncConnect4StartSoundState(connect4, options = {}) {
+  const latestStartActionId = getLatestConnect4StartActionId(connect4);
+  const shouldPlay =
+    options.play !== false
+    && latestStartActionId
+    && latestStartActionId !== state.lastConnect4StartActionId;
+
+  state.lastConnect4StartActionId = latestStartActionId;
+
+  if (shouldPlay && state.soundEnabled) {
+    state.audio.matchStart().catch(() => {});
+  }
 }
 
 function formatConnect4SeatLabel(color) {
@@ -1892,6 +1922,7 @@ async function joinConnect4Table() {
 
     state.me = payload.user;
     state.connect4 = payload.connect4;
+    syncConnect4StartSoundState(state.connect4);
     state.bootstrap = {
       ...state.bootstrap,
       connect4: payload.connect4,
@@ -1923,6 +1954,7 @@ async function leaveConnect4Table() {
 
     state.me = payload.user;
     state.connect4 = payload.connect4;
+    syncConnect4StartSoundState(state.connect4);
     state.bootstrap = {
       ...state.bootstrap,
       connect4: payload.connect4,
@@ -1964,6 +1996,7 @@ async function submitConnect4Move(column) {
 
     state.me = payload.user;
     state.connect4 = payload.connect4;
+    syncConnect4StartSoundState(state.connect4);
     state.bootstrap = {
       ...state.bootstrap,
       connect4: payload.connect4,
@@ -2897,6 +2930,7 @@ async function handleRoundState(payload) {
   state.pendingTicket = payload.pendingTicket || emptyPendingTicket(payload.currentRound?.id);
   state.cashoutRequests = payload.cashoutRequests || state.cashoutRequests;
   state.connect4 = payload.connect4 || state.connect4;
+  syncConnect4StartSoundState(state.connect4);
   state.poker = payload.poker || state.poker;
   state.selectedPokerTableSlug =
     payload.poker?.selectedTableSlug || state.selectedPokerTableSlug || null;
