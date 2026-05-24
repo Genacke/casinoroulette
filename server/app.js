@@ -10,6 +10,7 @@ const authRoutes = require("../routes/auth.routes");
 const gameRoutes = require("../routes/game.routes");
 const adminRoutes = require("../routes/admin.routes");
 const pokerRoutes = require("../routes/poker.routes");
+const slotsRoutes = require("../routes/slots.routes");
 
 const app = express();
 
@@ -69,6 +70,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/game", gameRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/poker", pokerRoutes);
+app.use("/api/slots", slotsRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

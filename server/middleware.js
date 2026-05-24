@@ -48,6 +48,14 @@ const pokerLimiter = rateLimit({
   message: limitMessage("Trop d'actions poker envoyees. Attends une seconde."),
 });
 
+const slotLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 45,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: limitMessage("Trop de spins machine a sous envoyes. Attends une seconde."),
+});
+
 const adminLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 45,
@@ -95,6 +103,12 @@ const pokerCooldown = createCooldown(
   700,
   (req) => `${req.ip}:${req.user?.id || "guest"}`,
   "Une action poker vient deja d'etre envoyee. Doucement.",
+);
+
+const slotCooldown = createCooldown(
+  550,
+  (req) => `${req.ip}:${req.user?.id || "guest"}`,
+  "Le rouleau vient deja d'etre lance. Laisse-le retomber.",
 );
 
 const chatCooldown = createCooldown(
@@ -182,6 +196,8 @@ module.exports = {
   registerLimiter,
   requireAdmin,
   requireAuth,
+  slotCooldown,
+  slotLimiter,
   spinCooldown,
   spinLimiter,
 };

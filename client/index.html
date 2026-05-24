@@ -40,6 +40,7 @@
           <div class="feature-list">
             <div class="feature-chip">Roulette 0-36</div>
             <div class="feature-chip">Poker Texas Hold'em</div>
+            <div class="feature-chip">Machine a sous 96% RTP cible</div>
             <div class="feature-chip">Rounds toutes les 30 s</div>
             <div class="feature-chip">Mise mini 200 000</div>
             <div class="feature-chip">Ticket max 5 000 000</div>
@@ -96,15 +97,15 @@
             <strong id="balanceValue">0 kamas</strong>
           </div>
           <div class="metric-card">
-            <span>Mise mini</span>
+            <span id="metricMinLabel">Mise mini</span>
             <strong id="minBetValue">0 kamas</strong>
           </div>
           <div class="metric-card">
-            <span>Ticket max</span>
+            <span id="metricMaxLabel">Ticket max</span>
             <strong id="ticketMaxValue">0 kamas</strong>
           </div>
           <div class="metric-card">
-            <span>Numero max</span>
+            <span id="metricSideLabel">Numero max</span>
             <strong id="greenMaxValue">0 kamas</strong>
           </div>
         </section>
@@ -122,6 +123,9 @@
             </button>
             <button id="viewPokerButton" class="tab-button" type="button">
               Poker
+            </button>
+            <button id="viewSlotsButton" class="tab-button" type="button">
+              Slots
             </button>
           </div>
         </section>
@@ -352,6 +356,161 @@
                   </div>
                 </div>
                 <div id="pokerActionLog" class="history-list"></div>
+              </section>
+            </section>
+
+            <section id="slotsView" class="slots-grid game-view hidden">
+              <section class="panel slots-machine-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Machine a sous</p>
+                    <h3>Portes du Dofus</h3>
+                  </div>
+                  <div class="slot-machine-badges">
+                    <span class="status-pill" id="slotModeBadge">Base game</span>
+                    <span class="status-pill" id="slotHashBadge">Seed --</span>
+                  </div>
+                </div>
+
+                <div class="slots-machine-shell">
+                  <div class="slot-stage">
+                    <div class="slot-stage-topbar">
+                      <div class="ticket-info">
+                        <span>Dernier gain</span>
+                        <strong id="slotLastWinValue">0 kamas</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Free spins</span>
+                        <strong id="slotFreeSpinsValue">0</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Multiplicateur</span>
+                        <strong id="slotMultiplierValue">x1</strong>
+                      </div>
+                    </div>
+
+                    <div id="slotReels" class="slot-reels" aria-label="Machine a sous"></div>
+                    <div id="slotStatusText" class="slot-status-text">
+                      Les rouleaux attendent ta mise.
+                    </div>
+                    <div id="slotCascadeTrail" class="slot-cascade-trail"></div>
+                  </div>
+
+                  <aside class="slot-control-panel">
+                    <div class="slot-control-head">
+                      <p class="eyebrow">Controle de spin</p>
+                      <h3>Tourne les rouleaux</h3>
+                    </div>
+
+                    <div class="slot-bet-grid">
+                      <label>
+                        <span>Mise totale</span>
+                        <input
+                          id="slotBetInput"
+                          type="number"
+                          min="100000"
+                          step="100000"
+                          value="100000"
+                        />
+                      </label>
+                      <div class="ticket-info">
+                        <span>Paylines</span>
+                        <strong id="slotPaylineValue">20 lignes</strong>
+                      </div>
+                    </div>
+
+                    <div id="slotBetPresets" class="slot-bet-presets"></div>
+
+                    <div class="slot-action-row">
+                      <button id="slotSpinButton" class="primary-button" type="button">
+                        Lancer
+                      </button>
+                      <button id="slotRefreshStateButton" class="ghost-button" type="button">
+                        Rafraichir
+                      </button>
+                    </div>
+
+                    <div class="slot-rule-chips" id="slotRuleChips"></div>
+                    <div id="slotFeatureSummary" class="bet-meta">
+                      3 scatters declenchent les free spins.
+                    </div>
+                  </aside>
+                </div>
+              </section>
+
+              <section class="panel slots-paytable-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Paiements</p>
+                    <h3>Table des symboles</h3>
+                  </div>
+                </div>
+                <div id="slotPaytable" class="slot-paytable-grid"></div>
+              </section>
+
+              <section class="panel slots-math-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Maths & fair play</p>
+                    <h3>Equilibrage machine</h3>
+                  </div>
+                </div>
+
+                <div id="slotMathGrid" class="slot-math-grid"></div>
+
+                <div class="slot-math-layout">
+                  <div class="sub-panel slot-probability-panel">
+                    <div class="section-title">Probabilites par symbole</div>
+                    <div id="slotProbabilityTable" class="table-shell"></div>
+                  </div>
+
+                  <div class="sub-panel slot-provably-panel">
+                    <div class="section-title">Provably fair</div>
+                    <div id="slotSeedMeta" class="bet-meta"></div>
+                    <form id="slotClientSeedForm" class="cashout-form">
+                      <label>
+                        <span>Client seed</span>
+                        <input
+                          id="slotClientSeedInput"
+                          type="text"
+                          minlength="3"
+                          maxlength="48"
+                          placeholder="Ex: amakna-123"
+                          required
+                        />
+                      </label>
+                      <div class="slot-action-row">
+                        <button class="secondary-button" type="submit">
+                          Mettre a jour
+                        </button>
+                        <button id="slotRotateSeedButton" class="ghost-button" type="button">
+                          Tourner les seeds
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                <div class="slot-math-layout">
+                  <div class="sub-panel">
+                    <div class="section-title">Distribution des gains</div>
+                    <div id="slotDistributionList" class="leaderboard-list"></div>
+                  </div>
+                  <div class="sub-panel">
+                    <div class="section-title">Strategie d'equilibrage</div>
+                    <div id="slotBalancingList" class="notification-list"></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel slots-history-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Historique slots</p>
+                    <h3>Derniers spins</h3>
+                  </div>
+                </div>
+                <div id="slotHistoryList" class="history-list"></div>
               </section>
             </section>
           </div>

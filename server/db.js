@@ -304,6 +304,50 @@ async function initializeDatabase() {
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS slot_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL UNIQUE,
+      server_seed TEXT NOT NULL,
+      server_seed_hash TEXT NOT NULL,
+      client_seed TEXT NOT NULL DEFAULT 'aventurier',
+      next_nonce INTEGER NOT NULL DEFAULT 0,
+      previous_server_seed TEXT,
+      previous_server_seed_hash TEXT,
+      previous_client_seed TEXT,
+      previous_nonce INTEGER NOT NULL DEFAULT 0,
+      free_spins_remaining INTEGER NOT NULL DEFAULT 0,
+      bonus_multiplier INTEGER NOT NULL DEFAULT 2,
+      bonus_bet INTEGER NOT NULL DEFAULT 0,
+      total_spins INTEGER NOT NULL DEFAULT 0,
+      total_bonus_spins INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS slot_spins (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      username_snapshot TEXT NOT NULL,
+      spin_mode TEXT NOT NULL CHECK(spin_mode IN ('base', 'bonus')),
+      bet_amount INTEGER NOT NULL,
+      total_win INTEGER NOT NULL DEFAULT 0,
+      net_result INTEGER NOT NULL DEFAULT 0,
+      hit INTEGER NOT NULL DEFAULT 0,
+      cascade_count INTEGER NOT NULL DEFAULT 0,
+      scatter_count INTEGER NOT NULL DEFAULT 0,
+      free_spins_awarded INTEGER NOT NULL DEFAULT 0,
+      free_spins_remaining INTEGER NOT NULL DEFAULT 0,
+      bonus_multiplier_start INTEGER NOT NULL DEFAULT 1,
+      bonus_multiplier_end INTEGER NOT NULL DEFAULT 1,
+      max_applied_multiplier INTEGER NOT NULL DEFAULT 1,
+      server_seed_hash TEXT NOT NULL,
+      client_seed TEXT NOT NULL,
+      nonce INTEGER NOT NULL,
+      summary_json TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_spins_user_created_at
       ON spins (user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_bets_user_created_at
@@ -331,6 +375,10 @@ async function initializeDatabase() {
       ON poker_seats (table_id, seat_no);
     CREATE INDEX IF NOT EXISTS idx_poker_action_logs_table_created
       ON poker_action_logs (table_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_slot_spins_user_created
+      ON slot_spins (user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_slot_spins_mode_created
+      ON slot_spins (spin_mode, created_at DESC);
   `);
 
   await ensureColumn("spins", "round_id", "INTEGER");

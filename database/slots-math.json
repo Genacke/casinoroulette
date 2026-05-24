@@ -1,0 +1,748 @@
+{
+  "generatedAt": "2026-05-24T09:07:11.897Z",
+  "sampleSize": 2000000,
+  "paidSpinCount": 2000000,
+  "totalSpinCount": 2203285,
+  "executedBonusSpins": 203285,
+  "rtp": 96.2379,
+  "hitFrequency": 31.8711,
+  "bonusFrequency": 142.6432,
+  "variance": 1306876361464.2385,
+  "standardDeviation": 1143186.932,
+  "averageWin": 301959.6986,
+  "maxObservedWinMultiplier": 2725.35,
+  "operatorProfitPerMillionWagered": 37621.22,
+  "distribution": [
+    {
+      "label": "0x",
+      "count": 1362578,
+      "frequency": 68.1289
+    },
+    {
+      "label": "0.01x - 0.49x",
+      "count": 129116,
+      "frequency": 6.4558
+    },
+    {
+      "label": "0.5x - 0.99x",
+      "count": 174735,
+      "frequency": 8.7368
+    },
+    {
+      "label": "1x - 4.99x",
+      "count": 296265,
+      "frequency": 14.8133
+    },
+    {
+      "label": "5x - 24.99x",
+      "count": 29125,
+      "frequency": 1.4563
+    },
+    {
+      "label": "25x - 99.99x",
+      "count": 5883,
+      "frequency": 0.2942
+    },
+    {
+      "label": "100x+",
+      "count": 2298,
+      "frequency": 0.1149
+    }
+  ],
+  "targets": {
+    "rtp": 96,
+    "houseEdge": 4,
+    "hitFrequency": "28% - 35%",
+    "bonusFrequency": "1 / 120 - 1 / 180",
+    "maxWin": "x10000"
+  },
+  "configuration": {
+    "reels": 5,
+    "rows": 4,
+    "paylines": 20,
+    "minBet": 100000,
+    "maxBet": 1000000,
+    "betStep": 100000,
+    "maxWinMultiplier": 10000,
+    "targetRtp": 96,
+    "targetHouseEdge": 4,
+    "volatility": "moyenne / haute",
+    "targetHitFrequency": "28% - 35%",
+    "targetBonusFrequency": "1 / 120 - 1 / 180",
+    "paytable": [
+      {
+        "symbolId": "kama",
+        "symbolLabel": "Kama",
+        "shortLabel": "K",
+        "tier": "low",
+        "accent": "gold",
+        "isWild": false,
+        "isScatter": false,
+        "payouts": {
+          "3": 0,
+          "4": 15,
+          "5": 37
+        }
+      },
+      {
+        "symbolId": "rune",
+        "symbolLabel": "Rune",
+        "shortLabel": "R",
+        "tier": "low",
+        "accent": "ember",
+        "isWild": false,
+        "isScatter": false,
+        "payouts": {
+          "3": 0,
+          "4": 19,
+          "5": 46
+        }
+      },
+      {
+        "symbolId": "potion",
+        "symbolLabel": "Potion",
+        "shortLabel": "P",
+        "tier": "mid",
+        "accent": "teal",
+        "isWild": false,
+        "isScatter": false,
+        "payouts": {
+          "3": 6,
+          "4": 20,
+          "5": 59
+        }
+      },
+      {
+        "symbolId": "mask",
+        "symbolLabel": "Masque",
+        "shortLabel": "M",
+        "tier": "mid",
+        "accent": "plum",
+        "isWild": false,
+        "isScatter": false,
+        "payouts": {
+          "3": 8,
+          "4": 25,
+          "5": 72
+        }
+      },
+      {
+        "symbolId": "shield",
+        "symbolLabel": "Bouclier",
+        "shortLabel": "B",
+        "tier": "high",
+        "accent": "forest",
+        "isWild": false,
+        "isScatter": false,
+        "payouts": {
+          "3": 11,
+          "4": 36,
+          "5": 118
+        }
+      },
+      {
+        "symbolId": "dragon",
+        "symbolLabel": "Dofus",
+        "shortLabel": "D",
+        "tier": "premium",
+        "accent": "sun",
+        "isWild": false,
+        "isScatter": false,
+        "payouts": {
+          "3": 17,
+          "4": 80,
+          "5": 345
+        }
+      },
+      {
+        "symbolId": "wild",
+        "symbolLabel": "Wild",
+        "shortLabel": "W",
+        "tier": "special",
+        "accent": "ruby",
+        "isWild": true,
+        "isScatter": false,
+        "payouts": {
+          "3": 23,
+          "4": 162,
+          "5": 1300
+        }
+      },
+      {
+        "symbolId": "scatter",
+        "symbolLabel": "Portail",
+        "shortLabel": "S",
+        "tier": "special",
+        "accent": "violet",
+        "isWild": false,
+        "isScatter": true,
+        "payouts": {
+          "3": 0,
+          "4": 0,
+          "5": 0
+        }
+      }
+    ],
+    "probabilityTable": [
+      {
+        "mode": "base",
+        "reels": [
+          {
+            "reel": 1,
+            "rowsVisible": 4,
+            "symbols": [
+              {
+                "symbolId": "kama",
+                "symbolLabel": "Kama",
+                "probabilityPerCell": 25.191,
+                "expectedVisiblePerSpin": 1.008
+              },
+              {
+                "symbolId": "rune",
+                "symbolLabel": "Rune",
+                "probabilityPerCell": 22.137,
+                "expectedVisiblePerSpin": 0.885
+              },
+              {
+                "symbolId": "potion",
+                "symbolLabel": "Potion",
+                "probabilityPerCell": 18.321,
+                "expectedVisiblePerSpin": 0.733
+              },
+              {
+                "symbolId": "mask",
+                "symbolLabel": "Masque",
+                "probabilityPerCell": 15.267,
+                "expectedVisiblePerSpin": 0.611
+              },
+              {
+                "symbolId": "shield",
+                "symbolLabel": "Bouclier",
+                "probabilityPerCell": 10.687,
+                "expectedVisiblePerSpin": 0.427
+              },
+              {
+                "symbolId": "dragon",
+                "symbolLabel": "Dofus",
+                "probabilityPerCell": 4.58,
+                "expectedVisiblePerSpin": 0.183
+              },
+              {
+                "symbolId": "wild",
+                "symbolLabel": "Wild",
+                "probabilityPerCell": 1.527,
+                "expectedVisiblePerSpin": 0.061
+              },
+              {
+                "symbolId": "scatter",
+                "symbolLabel": "Portail",
+                "probabilityPerCell": 2.29,
+                "expectedVisiblePerSpin": 0.092
+              }
+            ]
+          },
+          {
+            "reel": 2,
+            "rowsVisible": 4,
+            "symbols": [
+              {
+                "symbolId": "kama",
+                "symbolLabel": "Kama",
+                "probabilityPerCell": 24.427,
+                "expectedVisiblePerSpin": 0.977
+              },
+              {
+                "symbolId": "rune",
+                "symbolLabel": "Rune",
+                "probabilityPerCell": 22.137,
+                "expectedVisiblePerSpin": 0.885
+              },
+              {
+                "symbolId": "potion",
+                "symbolLabel": "Potion",
+                "probabilityPerCell": 18.321,
+                "expectedVisiblePerSpin": 0.733
+              },
+              {
+                "symbolId": "mask",
+                "symbolLabel": "Masque",
+                "probabilityPerCell": 15.267,
+                "expectedVisiblePerSpin": 0.611
+              },
+              {
+                "symbolId": "shield",
+                "symbolLabel": "Bouclier",
+                "probabilityPerCell": 10.687,
+                "expectedVisiblePerSpin": 0.427
+              },
+              {
+                "symbolId": "dragon",
+                "symbolLabel": "Dofus",
+                "probabilityPerCell": 4.58,
+                "expectedVisiblePerSpin": 0.183
+              },
+              {
+                "symbolId": "wild",
+                "symbolLabel": "Wild",
+                "probabilityPerCell": 2.29,
+                "expectedVisiblePerSpin": 0.092
+              },
+              {
+                "symbolId": "scatter",
+                "symbolLabel": "Portail",
+                "probabilityPerCell": 2.29,
+                "expectedVisiblePerSpin": 0.092
+              }
+            ]
+          },
+          {
+            "reel": 3,
+            "rowsVisible": 4,
+            "symbols": [
+              {
+                "symbolId": "kama",
+                "symbolLabel": "Kama",
+                "probabilityPerCell": 24.031,
+                "expectedVisiblePerSpin": 0.961
+              },
+              {
+                "symbolId": "rune",
+                "symbolLabel": "Rune",
+                "probabilityPerCell": 21.705,
+                "expectedVisiblePerSpin": 0.868
+              },
+              {
+                "symbolId": "potion",
+                "symbolLabel": "Potion",
+                "probabilityPerCell": 18.605,
+                "expectedVisiblePerSpin": 0.744
+              },
+              {
+                "symbolId": "mask",
+                "symbolLabel": "Masque",
+                "probabilityPerCell": 15.504,
+                "expectedVisiblePerSpin": 0.62
+              },
+              {
+                "symbolId": "shield",
+                "symbolLabel": "Bouclier",
+                "probabilityPerCell": 10.853,
+                "expectedVisiblePerSpin": 0.434
+              },
+              {
+                "symbolId": "dragon",
+                "symbolLabel": "Dofus",
+                "probabilityPerCell": 4.651,
+                "expectedVisiblePerSpin": 0.186
+              },
+              {
+                "symbolId": "wild",
+                "symbolLabel": "Wild",
+                "probabilityPerCell": 3.101,
+                "expectedVisiblePerSpin": 0.124
+              },
+              {
+                "symbolId": "scatter",
+                "symbolLabel": "Portail",
+                "probabilityPerCell": 1.55,
+                "expectedVisiblePerSpin": 0.062
+              }
+            ]
+          },
+          {
+            "reel": 4,
+            "rowsVisible": 4,
+            "symbols": [
+              {
+                "symbolId": "kama",
+                "symbolLabel": "Kama",
+                "probabilityPerCell": 24.615,
+                "expectedVisiblePerSpin": 0.985
+              },
+              {
+                "symbolId": "rune",
+                "symbolLabel": "Rune",
+                "probabilityPerCell": 22.308,
+                "expectedVisiblePerSpin": 0.892
+              },
+              {
+                "symbolId": "potion",
+                "symbolLabel": "Potion",
+                "probabilityPerCell": 18.462,
+                "expectedVisiblePerSpin": 0.738
+              },
+              {
+                "symbolId": "mask",
+                "symbolLabel": "Masque",
+                "probabilityPerCell": 15.385,
+                "expectedVisiblePerSpin": 0.615
+              },
+              {
+                "symbolId": "shield",
+                "symbolLabel": "Bouclier",
+                "probabilityPerCell": 10.769,
+                "expectedVisiblePerSpin": 0.431
+              },
+              {
+                "symbolId": "dragon",
+                "symbolLabel": "Dofus",
+                "probabilityPerCell": 4.615,
+                "expectedVisiblePerSpin": 0.185
+              },
+              {
+                "symbolId": "wild",
+                "symbolLabel": "Wild",
+                "probabilityPerCell": 2.308,
+                "expectedVisiblePerSpin": 0.092
+              },
+              {
+                "symbolId": "scatter",
+                "symbolLabel": "Portail",
+                "probabilityPerCell": 1.538,
+                "expectedVisiblePerSpin": 0.062
+              }
+            ]
+          },
+          {
+            "reel": 5,
+            "rowsVisible": 4,
+            "symbols": [
+              {
+                "symbolId": "kama",
+                "symbolLabel": "Kama",
+                "probabilityPerCell": 24.615,
+                "expectedVisiblePerSpin": 0.985
+              },
+              {
+                "symbolId": "rune",
+                "symbolLabel": "Rune",
+                "probabilityPerCell": 22.308,
+                "expectedVisiblePerSpin": 0.892
+              },
+              {
+                "symbolId": "potion",
+                "symbolLabel": "Potion",
+                "probabilityPerCell": 18.462,
+                "expectedVisiblePerSpin": 0.738
+              },
+              {
+                "symbolId": "mask",
+                "symbolLabel": "Masque",
+                "probabilityPerCell": 15.385,
+                "expectedVisiblePerSpin": 0.615
+              },
+              {
+                "symbolId": "shield",
+                "symbolLabel": "Bouclier",
+                "probabilityPerCell": 10.769,
+                "expectedVisiblePerSpin": 0.431
+              },
+              {
+                "symbolId": "dragon",
+                "symbolLabel": "Dofus",
+                "probabilityPerCell": 4.615,
+                "expectedVisiblePerSpin": 0.185
+              },
+              {
+                "symbolId": "wild",
+                "symbolLabel": "Wild",
+                "probabilityPerCell": 2.308,
+                "expectedVisiblePerSpin": 0.092
+              },
+              {
+                "symbolId": "scatter",
+                "symbolLabel": "Portail",
+                "probabilityPerCell": 1.538,
+                "expectedVisiblePerSpin": 0.062
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "mode": "bonus",
+        "reels": [
+          {
+            "reel": 1,
+            "rowsVisible": 4,
+            "symbols": [
+              {
+                "symbolId": "kama",
+                "symbolLabel": "Kama",
+                "probabilityPerCell": 22.764,
+                "expectedVisiblePerSpin": 0.911
+              },
+              {
+                "symbolId": "rune",
+                "symbolLabel": "Rune",
+                "probabilityPerCell": 20.325,
+                "expectedVisiblePerSpin": 0.813
+              },
+              {
+                "symbolId": "potion",
+                "symbolLabel": "Potion",
+                "probabilityPerCell": 17.886,
+                "expectedVisiblePerSpin": 0.715
+              },
+              {
+                "symbolId": "mask",
+                "symbolLabel": "Masque",
+                "probabilityPerCell": 14.634,
+                "expectedVisiblePerSpin": 0.585
+              },
+              {
+                "symbolId": "shield",
+                "symbolLabel": "Bouclier",
+                "probabilityPerCell": 10.569,
+                "expectedVisiblePerSpin": 0.423
+              },
+              {
+                "symbolId": "dragon",
+                "symbolLabel": "Dofus",
+                "probabilityPerCell": 6.504,
+                "expectedVisiblePerSpin": 0.26
+              },
+              {
+                "symbolId": "wild",
+                "symbolLabel": "Wild",
+                "probabilityPerCell": 4.065,
+                "expectedVisiblePerSpin": 0.163
+              },
+              {
+                "symbolId": "scatter",
+                "symbolLabel": "Portail",
+                "probabilityPerCell": 3.252,
+                "expectedVisiblePerSpin": 0.13
+              }
+            ]
+          },
+          {
+            "reel": 2,
+            "rowsVisible": 4,
+            "symbols": [
+              {
+                "symbolId": "kama",
+                "symbolLabel": "Kama",
+                "probabilityPerCell": 21.951,
+                "expectedVisiblePerSpin": 0.878
+              },
+              {
+                "symbolId": "rune",
+                "symbolLabel": "Rune",
+                "probabilityPerCell": 20.325,
+                "expectedVisiblePerSpin": 0.813
+              },
+              {
+                "symbolId": "potion",
+                "symbolLabel": "Potion",
+                "probabilityPerCell": 17.886,
+                "expectedVisiblePerSpin": 0.715
+              },
+              {
+                "symbolId": "mask",
+                "symbolLabel": "Masque",
+                "probabilityPerCell": 14.634,
+                "expectedVisiblePerSpin": 0.585
+              },
+              {
+                "symbolId": "shield",
+                "symbolLabel": "Bouclier",
+                "probabilityPerCell": 10.569,
+                "expectedVisiblePerSpin": 0.423
+              },
+              {
+                "symbolId": "dragon",
+                "symbolLabel": "Dofus",
+                "probabilityPerCell": 6.504,
+                "expectedVisiblePerSpin": 0.26
+              },
+              {
+                "symbolId": "wild",
+                "symbolLabel": "Wild",
+                "probabilityPerCell": 4.878,
+                "expectedVisiblePerSpin": 0.195
+              },
+              {
+                "symbolId": "scatter",
+                "symbolLabel": "Portail",
+                "probabilityPerCell": 3.252,
+                "expectedVisiblePerSpin": 0.13
+              }
+            ]
+          },
+          {
+            "reel": 3,
+            "rowsVisible": 4,
+            "symbols": [
+              {
+                "symbolId": "kama",
+                "symbolLabel": "Kama",
+                "probabilityPerCell": 21.138,
+                "expectedVisiblePerSpin": 0.846
+              },
+              {
+                "symbolId": "rune",
+                "symbolLabel": "Rune",
+                "probabilityPerCell": 19.512,
+                "expectedVisiblePerSpin": 0.78
+              },
+              {
+                "symbolId": "potion",
+                "symbolLabel": "Potion",
+                "probabilityPerCell": 17.886,
+                "expectedVisiblePerSpin": 0.715
+              },
+              {
+                "symbolId": "mask",
+                "symbolLabel": "Masque",
+                "probabilityPerCell": 14.634,
+                "expectedVisiblePerSpin": 0.585
+              },
+              {
+                "symbolId": "shield",
+                "symbolLabel": "Bouclier",
+                "probabilityPerCell": 10.569,
+                "expectedVisiblePerSpin": 0.423
+              },
+              {
+                "symbolId": "dragon",
+                "symbolLabel": "Dofus",
+                "probabilityPerCell": 7.317,
+                "expectedVisiblePerSpin": 0.293
+              },
+              {
+                "symbolId": "wild",
+                "symbolLabel": "Wild",
+                "probabilityPerCell": 5.691,
+                "expectedVisiblePerSpin": 0.228
+              },
+              {
+                "symbolId": "scatter",
+                "symbolLabel": "Portail",
+                "probabilityPerCell": 3.252,
+                "expectedVisiblePerSpin": 0.13
+              }
+            ]
+          },
+          {
+            "reel": 4,
+            "rowsVisible": 4,
+            "symbols": [
+              {
+                "symbolId": "kama",
+                "symbolLabel": "Kama",
+                "probabilityPerCell": 22.314,
+                "expectedVisiblePerSpin": 0.893
+              },
+              {
+                "symbolId": "rune",
+                "symbolLabel": "Rune",
+                "probabilityPerCell": 20.661,
+                "expectedVisiblePerSpin": 0.826
+              },
+              {
+                "symbolId": "potion",
+                "symbolLabel": "Potion",
+                "probabilityPerCell": 18.182,
+                "expectedVisiblePerSpin": 0.727
+              },
+              {
+                "symbolId": "mask",
+                "symbolLabel": "Masque",
+                "probabilityPerCell": 14.05,
+                "expectedVisiblePerSpin": 0.562
+              },
+              {
+                "symbolId": "shield",
+                "symbolLabel": "Bouclier",
+                "probabilityPerCell": 10.744,
+                "expectedVisiblePerSpin": 0.43
+              },
+              {
+                "symbolId": "dragon",
+                "symbolLabel": "Dofus",
+                "probabilityPerCell": 6.612,
+                "expectedVisiblePerSpin": 0.264
+              },
+              {
+                "symbolId": "wild",
+                "symbolLabel": "Wild",
+                "probabilityPerCell": 4.959,
+                "expectedVisiblePerSpin": 0.198
+              },
+              {
+                "symbolId": "scatter",
+                "symbolLabel": "Portail",
+                "probabilityPerCell": 2.479,
+                "expectedVisiblePerSpin": 0.099
+              }
+            ]
+          },
+          {
+            "reel": 5,
+            "rowsVisible": 4,
+            "symbols": [
+              {
+                "symbolId": "kama",
+                "symbolLabel": "Kama",
+                "probabilityPerCell": 22.314,
+                "expectedVisiblePerSpin": 0.893
+              },
+              {
+                "symbolId": "rune",
+                "symbolLabel": "Rune",
+                "probabilityPerCell": 20.661,
+                "expectedVisiblePerSpin": 0.826
+              },
+              {
+                "symbolId": "potion",
+                "symbolLabel": "Potion",
+                "probabilityPerCell": 18.182,
+                "expectedVisiblePerSpin": 0.727
+              },
+              {
+                "symbolId": "mask",
+                "symbolLabel": "Masque",
+                "probabilityPerCell": 14.05,
+                "expectedVisiblePerSpin": 0.562
+              },
+              {
+                "symbolId": "shield",
+                "symbolLabel": "Bouclier",
+                "probabilityPerCell": 10.744,
+                "expectedVisiblePerSpin": 0.43
+              },
+              {
+                "symbolId": "dragon",
+                "symbolLabel": "Dofus",
+                "probabilityPerCell": 6.612,
+                "expectedVisiblePerSpin": 0.264
+              },
+              {
+                "symbolId": "wild",
+                "symbolLabel": "Wild",
+                "probabilityPerCell": 4.959,
+                "expectedVisiblePerSpin": 0.198
+              },
+              {
+                "symbolId": "scatter",
+                "symbolLabel": "Portail",
+                "probabilityPerCell": 2.479,
+                "expectedVisiblePerSpin": 0.099
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "multiplierRules": {
+      "baseGame": "x1",
+      "freeSpinsStart": 2,
+      "increment": 1,
+      "cap": 25,
+      "bonusDescription": "En free spins, chaque cascade gagnante applique le multiplicateur courant puis l'augmente de +1 pour la suite de la feature.",
+      "retrigger": "3 scatters = 10 free spins, 4 scatters = 15 free spins, 5 scatters = 20 free spins.",
+      "wildBoost": "Les wilds et les scatters sont plus frequents pendant les free spins."
+    }
+  }
+}

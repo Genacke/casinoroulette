@@ -6,6 +6,7 @@ Site de roulette style casino pour serveur prive Dofus, avec monnaie virtuelle e
 
 - Roulette 0 a 36 avec couleurs rouge, noir et vert
 - Onglet poker Texas Hold'em no limit avec cave fixe
+- Onglet machine a sous 5x4 / 20 lignes avec cascades, free spins et provably fair
 - Resultat calcule uniquement cote serveur
 - Manches globales synchronisees pour tous les joueurs
 - Une manche ouvre toutes les 30 secondes par defaut
@@ -46,6 +47,8 @@ Site de roulette style casino pour serveur prive Dofus, avec monnaie virtuelle e
 |   |-- app.js
 |   `-- index.html
 |-- database/
+|   |-- simulate-slots.js
+|   |-- slots-math.json
 |   |-- seed.js
 |   `-- casino.sqlite
 |-- public/
@@ -56,7 +59,8 @@ Site de roulette style casino pour serveur prive Dofus, avec monnaie virtuelle e
 |   |-- admin.routes.js
 |   |-- auth.routes.js
 |   |-- game.routes.js
-|   `-- poker.routes.js
+|   |-- poker.routes.js
+|   `-- slots.routes.js
 |-- server/
 |   |-- app.js
 |   |-- auth.js
@@ -66,6 +70,7 @@ Site de roulette style casino pour serveur prive Dofus, avec monnaie virtuelle e
 |   |-- poker.js
 |   |-- roulette.js
 |   |-- rounds.js
+|   |-- slots.js
 |   `-- utils.js
 |-- .env.example
 |-- .gitignore
@@ -110,6 +115,11 @@ Variables principales:
 - `POKER_MAX_PLAYERS=6`
 - `POKER_TURN_SECONDS=25`
 - `POKER_SHOWDOWN_SECONDS=10`
+- `SLOT_MIN_BET=100000`
+- `SLOT_MAX_BET=1000000`
+- `SLOT_BET_STEP=100000`
+- `SLOT_MAX_WIN_MULTIPLIER=10000`
+- `SLOT_TARGET_RTP=96`
 
 ### 3. Creer des comptes de demo optionnels
 
@@ -171,11 +181,23 @@ npm run dev
 - Les joueurs ont 25 secondes pour agir avant auto-check ou auto-fold
 - Les sorties de table remettent la cave restante sur le solde du joueur
 
+## Machine a sous
+
+- Format: 5 rouleaux, 4 lignes, 20 paylines
+- Cascades apres gain, puis remplissage serveur des cases vides
+- 3 scatters = free spins, avec retrigger possible
+- Multiplicateur progressif pendant les free spins
+- Wilds et scatters plus frequents pendant le bonus
+- Seed serveur + client + nonce pour l'option provably fair
+- Snapshot mathematique simule sur plusieurs millions de spins
+
 ## Securite
 
 - RNG via `crypto.randomInt`
+- RNG machine a sous derive du hash `serverSeed + clientSeed + nonce`
 - Validation stricte des mises cote serveur
 - Validation stricte des actions poker cote serveur
+- Validation stricte des spins machine a sous cote serveur
 - Verification du solde cote serveur
 - Hash des mots de passe avec `bcryptjs`
 - JWT signe en cookie HttpOnly
@@ -216,6 +238,13 @@ npm run dev
 - `POST /api/poker/leave`
 - `POST /api/poker/action`
 
+### Slots
+
+- `GET /api/slots/state`
+- `POST /api/slots/spin`
+- `POST /api/slots/seed`
+- `POST /api/slots/seed/rotate`
+
 ### Admin
 
 - `GET /api/admin/dashboard`
@@ -238,6 +267,32 @@ Le projet a ete verifie localement sur les points suivants:
 - login admin
 - recherche joueur admin
 - credit manuel du solde depuis l'API admin
+- spin machine a sous cote serveur
+- mise a jour du client seed machine a sous
+- simulation machine a sous sur un gros echantillon
+
+## Simulation slots
+
+Generer ou regenerer le snapshot mathematique:
+
+```bash
+npm run slots:simulate
+```
+
+Avec un volume explicite:
+
+```bash
+node database/simulate-slots.js 2000000
+```
+
+Le fichier `database/slots-math.json` expose ensuite:
+
+- RTP reel simule
+- hit frequency
+- frequence bonus
+- variance et ecart type
+- distribution des gains
+- profit theorique operateur
 
 ## Docker
 
@@ -283,6 +338,11 @@ Le chemin le plus simple pour cette app est Railway avec le `Dockerfile` du repo
 - `POKER_MAX_PLAYERS=6`
 - `POKER_TURN_SECONDS=25`
 - `POKER_SHOWDOWN_SECONDS=10`
+- `SLOT_MIN_BET=100000`
+- `SLOT_MAX_BET=1000000`
+- `SLOT_BET_STEP=100000`
+- `SLOT_MAX_WIN_MULTIPLIER=10000`
+- `SLOT_TARGET_RTP=96`
 6. Optionnel: fixe `DB_PATH=/data/casino.sqlite` si tu veux un chemin explicite.
    Sinon l'application utilisera automatiquement `RAILWAY_VOLUME_MOUNT_PATH` quand le volume est attache.
 7. Deploy.

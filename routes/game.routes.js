@@ -23,6 +23,7 @@ const {
   setPlayerTicket,
 } = require("../server/rounds");
 const { buildPokerState } = require("../server/poker");
+const { buildSlotState } = require("../server/slots");
 const { normalizeMessage, parsePositiveInteger } = require("../server/utils");
 
 const router = express.Router();
@@ -207,17 +208,27 @@ async function getCashoutRequests(userId, limit = 8) {
 }
 
 async function getPlayerBootstrap(userId, pokerTableSlug = null) {
-  const [roundState, stats, history, leaderboard, chat, notifications, cashoutRequests, poker] =
-    await Promise.all([
-      buildRoundState(userId),
-      getPlayerStats(userId),
-      getPlayerHistory(userId),
-      getLeaderboard(),
-      getChatMessages(),
-      getNotifications(userId),
-      getCashoutRequests(userId),
-      buildPokerState(userId, pokerTableSlug),
-    ]);
+  const [
+    roundState,
+    stats,
+    history,
+    leaderboard,
+    chat,
+    notifications,
+    cashoutRequests,
+    poker,
+    slots,
+  ] = await Promise.all([
+    buildRoundState(userId),
+    getPlayerStats(userId),
+    getPlayerHistory(userId),
+    getLeaderboard(),
+    getChatMessages(),
+    getNotifications(userId),
+    getCashoutRequests(userId),
+    buildPokerState(userId, pokerTableSlug),
+    buildSlotState(userId),
+  ]);
 
   return {
     user: serializeUser(roundState.user),
@@ -236,6 +247,7 @@ async function getPlayerBootstrap(userId, pokerTableSlug = null) {
     latestPlayerSpin: roundState.latestPlayerSpin,
     serverTime: roundState.serverTime,
     poker,
+    slots,
     cashout: {
       feePercent: config.cashoutFeePercent,
     },
