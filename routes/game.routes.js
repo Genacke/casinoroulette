@@ -24,6 +24,7 @@ const {
 } = require("../server/rounds");
 const { buildConnect4State } = require("../server/connect4");
 const { buildPokerState } = require("../server/poker");
+const { buildSkribblState } = require("../server/skribbl");
 const { buildSlotState } = require("../server/slots");
 const { normalizeMessage, parsePositiveInteger } = require("../server/utils");
 
@@ -219,6 +220,7 @@ async function getPlayerBootstrap(userId, pokerTableSlug = null) {
     cashoutRequests,
     connect4,
     poker,
+    skribbl,
     slots,
   ] = await Promise.all([
     buildRoundState(userId),
@@ -230,6 +232,7 @@ async function getPlayerBootstrap(userId, pokerTableSlug = null) {
     getCashoutRequests(userId),
     buildConnect4State(userId),
     buildPokerState(userId, pokerTableSlug),
+    buildSkribblState(userId),
     buildSlotState(userId),
   ]);
 
@@ -251,6 +254,7 @@ async function getPlayerBootstrap(userId, pokerTableSlug = null) {
     serverTime: roundState.serverTime,
     connect4,
     poker,
+    skribbl,
     slots,
     cashout: {
       feePercent: config.cashoutFeePercent,
@@ -288,11 +292,12 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const pokerTableSlug = req.query?.table || null;
-    const [roundState, cashoutRequests, connect4, poker] = await Promise.all([
+    const [roundState, cashoutRequests, connect4, poker, skribbl] = await Promise.all([
       buildRoundState(req.user.id),
       getCashoutRequests(req.user.id),
       buildConnect4State(req.user.id),
       buildPokerState(req.user.id, pokerTableSlug),
+      buildSkribblState(req.user.id),
     ]);
 
     res.json({
@@ -309,6 +314,7 @@ router.get(
         cashoutRequests.find((request) => request.status === "pending") || null,
       connect4,
       poker,
+      skribbl,
     });
   }),
 );

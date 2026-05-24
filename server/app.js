@@ -7,11 +7,13 @@ const { startConnect4Engine } = require("./connect4");
 const { initializeDatabase } = require("./db");
 const { startPokerEngine } = require("./poker");
 const { startRoundEngine } = require("./rounds");
+const { startSkribblEngine } = require("./skribbl");
 const authRoutes = require("../routes/auth.routes");
 const gameRoutes = require("../routes/game.routes");
 const adminRoutes = require("../routes/admin.routes");
 const connect4Routes = require("../routes/connect4.routes");
 const pokerRoutes = require("../routes/poker.routes");
+const skribblRoutes = require("../routes/skribbl.routes");
 const slotsRoutes = require("../routes/slots.routes");
 
 const app = express();
@@ -73,6 +75,7 @@ app.use("/api/game", gameRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/connect4", connect4Routes);
 app.use("/api/poker", pokerRoutes);
+app.use("/api/skribbl", skribblRoutes);
 app.use("/api/slots", slotsRoutes);
 
 app.use((req, res) => {
@@ -95,6 +98,7 @@ initializeDatabase()
     await startRoundEngine();
     await startPokerEngine();
     await startConnect4Engine();
+    await startSkribblEngine();
     app.listen(config.port, () => {
       console.log(`Roulette casino en ligne sur http://localhost:${config.port}`);
     });

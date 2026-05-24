@@ -19,6 +19,16 @@ const DEFAULT_PROBABILITIES = [
   { type: "range", label: "Manque / Passe", probability: 48.65, totalReturnMultiplier: 2.01 },
   { type: "dozen", label: "Douzaine", probability: 32.43, totalReturnMultiplier: 3.02 },
 ];
+const SKRIBBL_COLORS = [
+  "#f6eed9",
+  "#201912",
+  "#d69438",
+  "#b8573f",
+  "#5e8d46",
+  "#4f76c7",
+  "#9a72dd",
+  "#f08d8d",
+];
 
 const state = {
   me: null,
@@ -52,6 +62,20 @@ const state = {
   connect4: null,
   lastConnect4StartActionId: null,
   isSubmittingConnect4: false,
+  skribbl: null,
+  isSubmittingSkribbl: false,
+  skribblPainter: {
+    color: SKRIBBL_COLORS[0],
+    width: 6,
+    isDrawing: false,
+    pointerId: null,
+    points: [],
+    pendingStrokes: [],
+    uploadQueue: [],
+    isUploading: false,
+    lastRenderSignature: "",
+    roundNumber: 0,
+  },
   selectedPokerTableSlug: null,
   poker: null,
   isLoadingPokerView: false,
@@ -164,6 +188,33 @@ function cacheElements() {
     roundStatusValue: document.getElementById("roundStatusValue"),
     roundTimerValue: document.getElementById("roundTimerValue"),
     soundToggle: document.getElementById("soundToggle"),
+    skribblCanvas: document.getElementById("skribblCanvas"),
+    skribblClearButton: document.getElementById("skribblClearButton"),
+    skribblDrawerValue: document.getElementById("skribblDrawerValue"),
+    skribblDrawSecondsValue: document.getElementById("skribblDrawSecondsValue"),
+    skribblEntryFeeValue: document.getElementById("skribblEntryFeeValue"),
+    skribblGuessButton: document.getElementById("skribblGuessButton"),
+    skribblGuessFeed: document.getElementById("skribblGuessFeed"),
+    skribblGuessForm: document.getElementById("skribblGuessForm"),
+    skribblGuessInput: document.getElementById("skribblGuessInput"),
+    skribblHeroStatus: document.getElementById("skribblHeroStatus"),
+    skribblHouseValue: document.getElementById("skribblHouseValue"),
+    skribblJoinButton: document.getElementById("skribblJoinButton"),
+    skribblLeaveButton: document.getElementById("skribblLeaveButton"),
+    skribblLibraryValue: document.getElementById("skribblLibraryValue"),
+    skribblPalette: document.getElementById("skribblPalette"),
+    skribblPlayerList: document.getElementById("skribblPlayerList"),
+    skribblPodium: document.getElementById("skribblPodium"),
+    skribblPotValue: document.getElementById("skribblPotValue"),
+    skribblPrizeValue: document.getElementById("skribblPrizeValue"),
+    skribblPromptLabel: document.getElementById("skribblPromptLabel"),
+    skribblPromptValue: document.getElementById("skribblPromptValue"),
+    skribblStatusBadge: document.getElementById("skribblStatusBadge"),
+    skribblStatusText: document.getElementById("skribblStatusText"),
+    skribblTimerValue: document.getElementById("skribblTimerValue"),
+    skribblToolbar: document.getElementById("skribblToolbar"),
+    skribblView: document.getElementById("skribblView"),
+    skribblWidthInput: document.getElementById("skribblWidthInput"),
     slotBetInput: document.getElementById("slotBetInput"),
     slotBetPresets: document.getElementById("slotBetPresets"),
     slotCascadeTrail: document.getElementById("slotCascadeTrail"),
@@ -187,6 +238,7 @@ function cacheElements() {
     viewConnect4Button: document.getElementById("viewConnect4Button"),
     viewPokerButton: document.getElementById("viewPokerButton"),
     viewRouletteButton: document.getElementById("viewRouletteButton"),
+    viewSkribblButton: document.getElementById("viewSkribblButton"),
     viewSlotsButton: document.getElementById("viewSlotsButton"),
     rouletteView: document.getElementById("rouletteView"),
     pokerView: document.getElementById("pokerView"),
@@ -242,10 +294,21 @@ function bindEvents() {
   elements.viewRouletteButton.addEventListener("click", () => setActiveView("roulette"));
   elements.viewPokerButton.addEventListener("click", () => setActiveView("poker"));
   elements.viewConnect4Button.addEventListener("click", () => setActiveView("connect4"));
+  elements.viewSkribblButton.addEventListener("click", () => setActiveView("skribbl"));
   elements.viewSlotsButton.addEventListener("click", () => setActiveView("slots"));
   elements.connect4JoinButton.addEventListener("click", joinConnect4Table);
   elements.connect4LeaveButton.addEventListener("click", leaveConnect4Table);
   elements.connect4Board.addEventListener("click", onConnect4ColumnSelect);
+  elements.skribblJoinButton.addEventListener("click", joinSkribblRoom);
+  elements.skribblLeaveButton.addEventListener("click", leaveSkribblRoom);
+  elements.skribblClearButton.addEventListener("click", clearSkribblBoard);
+  elements.skribblGuessForm.addEventListener("submit", onSkribblGuessSubmit);
+  elements.skribblPalette.addEventListener("click", onSkribblPaletteSelect);
+  elements.skribblWidthInput.addEventListener("input", onSkribblWidthChange);
+  elements.skribblCanvas.addEventListener("pointerdown", onSkribblPointerDown);
+  window.addEventListener("pointermove", onSkribblPointerMove);
+  window.addEventListener("pointerup", onSkribblPointerUp);
+  window.addEventListener("pointercancel", onSkribblPointerUp);
   elements.joinPokerButton.addEventListener("click", joinPokerTable);
   elements.leavePokerButton.addEventListener("click", leavePokerTable);
   elements.pokerFoldButton.addEventListener("click", () => submitPokerAction("fold"));
@@ -316,6 +379,7 @@ function applyBootstrap(payload, options = {}) {
   state.cashoutRequests = payload.cashoutRequests || [];
   state.connect4 = payload.connect4 || null;
   syncConnect4StartSoundState(state.connect4, { play: false });
+  state.skribbl = payload.skribbl || null;
   state.poker = payload.poker || null;
   state.slots = payload.slots || null;
   state.selectedPokerTableSlug =
@@ -350,6 +414,7 @@ function applyBootstrap(payload, options = {}) {
   renderChat(payload.chat);
   renderCashoutSection();
   renderConnect4();
+  renderSkribbl();
   renderPoker();
   renderSlots();
   renderProbabilityCards(payload.roulette?.probabilities || DEFAULT_PROBABILITIES);
@@ -393,7 +458,8 @@ function setAuthTab(tab) {
 
 async function onLogin(event) {
   event.preventDefault();
-  const formData = new FormData(event.currentTarget);
+  const form = event.currentTarget;
+  const formData = new FormData(form);
 
   try {
     const payload = await api("/api/auth/login", {
@@ -408,7 +474,7 @@ async function onLogin(event) {
     state.me = payload.user;
     await loadBootstrap({ seedSlip: true });
     showApp();
-    event.currentTarget.reset();
+    form.reset();
   } catch (error) {
     showToast(error.message, "error");
   }
@@ -416,7 +482,8 @@ async function onLogin(event) {
 
 async function onRegister(event) {
   event.preventDefault();
-  const formData = new FormData(event.currentTarget);
+  const form = event.currentTarget;
+  const formData = new FormData(form);
 
   try {
     const payload = await api("/api/auth/register", {
@@ -431,7 +498,7 @@ async function onRegister(event) {
     state.me = payload.user;
     await loadBootstrap({ seedSlip: true });
     showApp();
-    event.currentTarget.reset();
+    form.reset();
   } catch (error) {
     showToast(error.message, "error");
   }
@@ -457,6 +524,20 @@ async function logout() {
   state.connect4 = null;
   state.lastConnect4StartActionId = null;
   state.isSubmittingConnect4 = false;
+  state.skribbl = null;
+  state.isSubmittingSkribbl = false;
+  state.skribblPainter = {
+    color: SKRIBBL_COLORS[0],
+    width: 6,
+    isDrawing: false,
+    pointerId: null,
+    points: [],
+    pendingStrokes: [],
+    uploadQueue: [],
+    isUploading: false,
+    lastRenderSignature: "",
+    roundNumber: 0,
+  };
   state.selectedPokerTableSlug = null;
   state.poker = null;
   state.isLoadingPokerView = false;
@@ -473,6 +554,7 @@ async function logout() {
   renderBetSlip();
   renderCashoutSection();
   renderConnect4();
+  renderSkribbl();
   renderPoker();
   renderSlots();
   showAuth();
@@ -838,6 +920,16 @@ function renderMetrics() {
     elements.minBetValue.textContent = formatKamas(state.connect4.entryFee || 0);
     elements.ticketMaxValue.textContent = formatKamas(state.connect4.winnerPayout || 0);
     elements.greenMaxValue.textContent = `${state.connect4.turnSeconds || 7} sec`;
+    return;
+  }
+
+  if (state.activeView === "skribbl" && state.skribbl) {
+    elements.metricMinLabel.textContent = "Entree";
+    elements.metricMaxLabel.textContent = "Pot redistribue";
+    elements.metricSideLabel.textContent = "Timer";
+    elements.minBetValue.textContent = formatKamas(state.skribbl.entryFee || 0);
+    elements.ticketMaxValue.textContent = formatKamas(state.skribbl.payoutPool || 0);
+    elements.greenMaxValue.textContent = `${state.skribbl.drawSeconds || 60} sec`;
     return;
   }
 
@@ -1270,6 +1362,627 @@ function renderConnect4() {
 
   renderConnect4Board(connect4);
   renderConnect4Log(connect4);
+}
+
+function getSkribblState() {
+  return state.skribbl || state.bootstrap?.skribbl || null;
+}
+
+function formatSkribblStatus(skribbl) {
+  if (!skribbl) {
+    return "Chargement";
+  }
+
+  if (skribbl.status === "playing") {
+    return skribbl.secondsToEnd > 0 ? `Dessin ${skribbl.secondsToEnd}s` : "Dessin";
+  }
+
+  if (skribbl.status === "showdown") {
+    return skribbl.secondsToNextRound > 0
+      ? `Podium ${skribbl.secondsToNextRound}s`
+      : "Podium";
+  }
+
+  return `Attente ${skribbl.seatCount || 0}/${skribbl.minPlayers || 2}`;
+}
+
+function resetSkribblPainterForRound(roundNumber) {
+  state.skribblPainter.roundNumber = roundNumber;
+  state.skribblPainter.isDrawing = false;
+  state.skribblPainter.pointerId = null;
+  state.skribblPainter.points = [];
+  state.skribblPainter.pendingStrokes = [];
+  state.skribblPainter.uploadQueue = [];
+  state.skribblPainter.isUploading = false;
+  state.skribblPainter.lastRenderSignature = "";
+}
+
+function syncSkribblRoundTracking(skribbl) {
+  const activeRoundNumber = Number(skribbl?.roundNumber || 0);
+
+  if (activeRoundNumber !== state.skribblPainter.roundNumber) {
+    resetSkribblPainterForRound(activeRoundNumber);
+  }
+
+  if (!skribbl || skribbl.status !== "playing") {
+    state.skribblPainter.isDrawing = false;
+    state.skribblPainter.pointerId = null;
+    state.skribblPainter.points = [];
+    if (state.skribblPainter.pendingStrokes.length || state.skribblPainter.uploadQueue.length) {
+      state.skribblPainter.pendingStrokes = [];
+      state.skribblPainter.uploadQueue = [];
+      state.skribblPainter.isUploading = false;
+      state.skribblPainter.lastRenderSignature = "";
+    }
+  }
+}
+
+function drawSkribblStroke(context, canvas, stroke) {
+  if (!stroke?.points?.length) {
+    return;
+  }
+
+  context.save();
+  context.strokeStyle = stroke.color || SKRIBBL_COLORS[0];
+  context.fillStyle = stroke.color || SKRIBBL_COLORS[0];
+  context.lineWidth = Number(stroke.width || 6);
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.beginPath();
+
+  stroke.points.forEach((point, index) => {
+    const x = point.x * canvas.width;
+    const y = point.y * canvas.height;
+
+    if (index === 0) {
+      context.moveTo(x, y);
+      return;
+    }
+
+    context.lineTo(x, y);
+  });
+
+  context.stroke();
+
+  if (stroke.points.length === 1) {
+    context.beginPath();
+    context.arc(
+      stroke.points[0].x * canvas.width,
+      stroke.points[0].y * canvas.height,
+      Number(stroke.width || 6) / 2,
+      0,
+      Math.PI * 2,
+    );
+    context.fill();
+  }
+
+  context.restore();
+}
+
+function paintSkribblBackdrop(context, canvas) {
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#efe5cf";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  context.strokeStyle = "rgba(55, 42, 28, 0.06)";
+  context.lineWidth = 1;
+
+  for (let x = 28; x < canvas.width; x += 28) {
+    context.beginPath();
+    context.moveTo(x, 0);
+    context.lineTo(x, canvas.height);
+    context.stroke();
+  }
+
+  for (let y = 28; y < canvas.height; y += 28) {
+    context.beginPath();
+    context.moveTo(0, y);
+    context.lineTo(canvas.width, y);
+    context.stroke();
+  }
+}
+
+function renderSkribblCanvas(skribbl) {
+  const canvas = elements.skribblCanvas;
+  const context = canvas?.getContext("2d");
+  if (!canvas || !context) {
+    return;
+  }
+
+  const signature = [
+    skribbl?.roundNumber || 0,
+    skribbl?.status || "waiting",
+    skribbl?.strokeCount || 0,
+    skribbl?.lastStrokeId || 0,
+    state.skribblPainter.pendingStrokes.length,
+    state.skribblPainter.points.length,
+    state.skribblPainter.color,
+    state.skribblPainter.width,
+  ].join(":");
+
+  if (
+    signature === state.skribblPainter.lastRenderSignature
+    && !state.skribblPainter.isDrawing
+  ) {
+    return;
+  }
+
+  paintSkribblBackdrop(context, canvas);
+
+  (skribbl?.strokes || []).forEach((stroke) => drawSkribblStroke(context, canvas, stroke));
+  state.skribblPainter.pendingStrokes.forEach((stroke) =>
+    drawSkribblStroke(context, canvas, stroke),
+  );
+
+  if (state.skribblPainter.points.length) {
+    drawSkribblStroke(context, canvas, {
+      color: state.skribblPainter.color,
+      width: state.skribblPainter.width,
+      points: state.skribblPainter.points,
+    });
+  }
+
+  state.skribblPainter.lastRenderSignature = signature;
+}
+
+function renderSkribblPalette(skribbl) {
+  elements.skribblPalette.innerHTML = SKRIBBL_COLORS.map(
+    (color) => `
+      <button
+        class="skribbl-color-swatch ${state.skribblPainter.color === color ? "active" : ""}"
+        data-skribbl-color="${color}"
+        style="background:${color};"
+        type="button"
+        ${!skribbl?.canDraw ? "disabled" : ""}
+      ></button>
+    `,
+  ).join("");
+
+  elements.skribblWidthInput.value = String(state.skribblPainter.width);
+  elements.skribblWidthInput.disabled = !skribbl?.canDraw;
+  elements.skribblClearButton.disabled = state.isSubmittingSkribbl || !skribbl?.canClear;
+}
+
+function renderSkribblPlayerList(skribbl) {
+  const players = skribbl?.players || [];
+
+  if (!players.length) {
+    elements.skribblPlayerList.innerHTML = `<div class="empty-state">La salle attend ses artistes.</div>`;
+    return;
+  }
+
+  elements.skribblPlayerList.innerHTML = players
+    .map(
+      (player) => `
+        <article class="skribbl-player-card ${player.isMe ? "is-me" : ""} ${player.isDrawer ? "is-drawer" : ""}">
+          <div>
+            <strong>${escapeHtml(player.username)}</strong>
+            <div class="history-meta">${escapeHtml(player.badge)}</div>
+          </div>
+          ${
+            player.prize
+              ? `<strong class="result-positive">${formatCompactKamas(player.prize)}</strong>`
+              : ""
+          }
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderSkribblPodium(skribbl) {
+  const podium = skribbl?.podium || [];
+  const preview = skribbl?.prizePreview || [];
+
+  if (!podium.length) {
+    elements.skribblPodium.innerHTML = preview
+      .map(
+        (slot) => `
+          <div class="skribbl-podium-slot muted">
+            <span>#${slot.rank}</span>
+            <strong>${formatCompactKamas(slot.amount)}</strong>
+          </div>
+        `,
+      )
+      .join("");
+    return;
+  }
+
+  elements.skribblPodium.innerHTML = podium
+    .map(
+      (slot) => `
+        <div class="skribbl-podium-slot">
+          <span>#${slot.rank}</span>
+          <strong>${escapeHtml(slot.username)}</strong>
+          <div class="history-meta">${formatKamas(slot.prize)}</div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderSkribblFeed(skribbl) {
+  const feed = skribbl?.guessFeed || [];
+
+  if (!feed.length) {
+    elements.skribblGuessFeed.innerHTML = `<div class="empty-state">Les propositions et trouvailles apparaitront ici.</div>`;
+    return;
+  }
+
+  elements.skribblGuessFeed.innerHTML = feed
+    .map(
+      (entry) => `
+        <div class="history-item ${entry.isCorrect ? "skribbl-correct" : ""}">
+          <div>
+            <strong>${escapeHtml(entry.username || "Systeme")}</strong>
+            <div class="history-meta">${formatDate(entry.createdAt)}</div>
+          </div>
+          <div class="bet-meta">${escapeHtml(entry.text)}</div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderSkribbl() {
+  const skribbl = getSkribblState();
+  syncSkribblRoundTracking(skribbl);
+
+  if (!skribbl) {
+    elements.skribblStatusBadge.textContent = "Chargement";
+    elements.skribblHeroStatus.textContent = "Pas assis";
+    elements.skribblPotValue.textContent = formatKamas(0);
+    elements.skribblPrizeValue.textContent = formatKamas(0);
+    elements.skribblDrawerValue.textContent = "En attente";
+    elements.skribblTimerValue.textContent = "01:00";
+    elements.skribblPromptLabel.textContent = "Mot";
+    elements.skribblPromptValue.textContent = "En attente";
+    elements.skribblStatusText.textContent = "La salle de dessin se charge.";
+    elements.skribblEntryFeeValue.textContent = formatKamas(100000);
+    elements.skribblDrawSecondsValue.textContent = "60 sec";
+    elements.skribblHouseValue.textContent = "10%";
+    elements.skribblLibraryValue.textContent = "--";
+    elements.skribblGuessInput.disabled = true;
+    elements.skribblGuessButton.disabled = true;
+    elements.skribblJoinButton.disabled = true;
+    elements.skribblLeaveButton.disabled = true;
+    renderSkribblPalette(null);
+    renderSkribblPlayerList(null);
+    renderSkribblPodium(null);
+    renderSkribblFeed(null);
+    renderSkribblCanvas(null);
+    return;
+  }
+
+  elements.skribblStatusBadge.textContent = formatSkribblStatus(skribbl);
+  elements.skribblHeroStatus.textContent = skribbl.isDrawer
+    ? "Dessinateur"
+    : skribbl.hasGuessedCorrect
+      ? `Classe #${skribbl.myGuessRank}`
+      : skribbl.canGuess
+        ? "Devineur"
+        : skribbl.canJoin
+          ? "Place libre"
+          : "Observateur";
+  elements.skribblPotValue.textContent = formatKamas(skribbl.pot || 0);
+  elements.skribblPrizeValue.textContent = formatKamas(skribbl.payoutPool || 0);
+  elements.skribblDrawerValue.textContent = skribbl.drawerUsername || "En attente";
+  elements.skribblTimerValue.textContent = formatCountdown(
+    skribbl.status === "playing"
+      ? skribbl.secondsToEnd
+      : skribbl.status === "showdown"
+        ? skribbl.secondsToNextRound
+        : skribbl.drawSeconds || 60,
+  );
+  elements.skribblPromptLabel.textContent = skribbl.wordLabel || "Mot";
+  elements.skribblPromptValue.textContent = skribbl.wordDisplay || "En attente";
+  elements.skribblStatusText.textContent = skribbl.statusText;
+  elements.skribblEntryFeeValue.textContent = formatKamas(skribbl.entryFee || 0);
+  elements.skribblDrawSecondsValue.textContent = `${skribbl.drawSeconds || 60} sec`;
+  elements.skribblHouseValue.textContent = `${skribbl.housePercent || 10}%`;
+  elements.skribblLibraryValue.textContent = `${skribbl.librarySize || 0} mots`;
+  elements.skribblGuessInput.disabled = state.isSubmittingSkribbl || !skribbl.canGuess;
+  elements.skribblGuessButton.disabled = state.isSubmittingSkribbl || !skribbl.canGuess;
+  elements.skribblGuessButton.textContent = skribbl.hasGuessedCorrect
+    ? "Trouve"
+    : "Proposer";
+  elements.skribblGuessInput.placeholder = skribbl.canGuess
+    ? "Tape ton mot ici"
+    : skribbl.isDrawer
+      ? "Tu dessines cette manche"
+      : skribbl.joinBlockedByBalance
+        ? "Solde insuffisant pour entrer"
+        : "Attends ton tour";
+  elements.skribblJoinButton.disabled = state.isSubmittingSkribbl || !skribbl.canJoin;
+  elements.skribblLeaveButton.disabled = state.isSubmittingSkribbl || !skribbl.canLeave;
+  elements.skribblLeaveButton.textContent =
+    skribbl.status === "waiting" ? "Quitter" : "Sortir";
+
+  renderSkribblPalette(skribbl);
+  renderSkribblPlayerList(skribbl);
+  renderSkribblPodium(skribbl);
+  renderSkribblFeed(skribbl);
+  renderSkribblCanvas(skribbl);
+}
+
+function getSkribblCanvasPoint(event) {
+  const rect = elements.skribblCanvas.getBoundingClientRect();
+  const x = rect.width ? (event.clientX - rect.left) / rect.width : 0;
+  const y = rect.height ? (event.clientY - rect.top) / rect.height : 0;
+
+  return {
+    x: Math.max(0, Math.min(1, Number(x.toFixed(4)))),
+    y: Math.max(0, Math.min(1, Number(y.toFixed(4)))),
+  };
+}
+
+function onSkribblPaletteSelect(event) {
+  const target = event.target.closest("[data-skribbl-color]");
+  if (!target || target.disabled) {
+    return;
+  }
+
+  state.skribblPainter.color = target.dataset.skribblColor;
+  state.skribblPainter.lastRenderSignature = "";
+  renderSkribblPalette(getSkribblState());
+}
+
+function onSkribblWidthChange() {
+  state.skribblPainter.width = Number(elements.skribblWidthInput.value || 6);
+  state.skribblPainter.lastRenderSignature = "";
+  renderSkribblCanvas(getSkribblState());
+}
+
+function onSkribblPointerDown(event) {
+  const skribbl = getSkribblState();
+  if (!skribbl?.canDraw || state.isSubmittingSkribbl || state.skribblPainter.isUploading) {
+    return;
+  }
+
+  event.preventDefault();
+  state.skribblPainter.isDrawing = true;
+  state.skribblPainter.pointerId = event.pointerId;
+  state.skribblPainter.points = [getSkribblCanvasPoint(event)];
+  state.skribblPainter.lastRenderSignature = "";
+  renderSkribblCanvas(skribbl);
+}
+
+function onSkribblPointerMove(event) {
+  const skribbl = getSkribblState();
+  if (
+    !skribbl?.canDraw
+    || !state.skribblPainter.isDrawing
+    || state.skribblPainter.pointerId !== event.pointerId
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  const point = getSkribblCanvasPoint(event);
+  const lastPoint =
+    state.skribblPainter.points[state.skribblPainter.points.length - 1] || point;
+  const delta = Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y);
+
+  if (delta < 0.0025) {
+    return;
+  }
+
+  state.skribblPainter.points.push(point);
+  state.skribblPainter.lastRenderSignature = "";
+  renderSkribblCanvas(skribbl);
+}
+
+function queueSkribblStrokeUpload(stroke) {
+  state.skribblPainter.pendingStrokes.push(stroke);
+  state.skribblPainter.uploadQueue.push(stroke);
+  state.skribblPainter.lastRenderSignature = "";
+  renderSkribblCanvas(getSkribblState());
+  flushSkribblStrokeQueue();
+}
+
+async function flushSkribblStrokeQueue() {
+  if (state.skribblPainter.isUploading || !state.skribblPainter.uploadQueue.length) {
+    return;
+  }
+
+  const stroke = state.skribblPainter.uploadQueue[0];
+  state.skribblPainter.isUploading = true;
+
+  try {
+    const payload = await api("/api/skribbl/stroke", {
+      method: "POST",
+      body: JSON.stringify({ stroke }),
+    });
+
+    state.me = payload.user;
+    state.skribbl = payload.skribbl;
+    state.bootstrap = {
+      ...state.bootstrap,
+      skribbl: payload.skribbl,
+    };
+    state.skribblPainter.uploadQueue.shift();
+    state.skribblPainter.pendingStrokes.shift();
+    state.skribblPainter.lastRenderSignature = "";
+    renderMetrics();
+    renderSkribbl();
+  } catch (error) {
+    state.skribblPainter.uploadQueue.shift();
+    state.skribblPainter.pendingStrokes.shift();
+    state.skribblPainter.lastRenderSignature = "";
+    renderSkribblCanvas(getSkribblState());
+    showToast(error.message, "error");
+  } finally {
+    state.skribblPainter.isUploading = false;
+    if (state.skribblPainter.uploadQueue.length) {
+      flushSkribblStrokeQueue();
+    }
+  }
+}
+
+function onSkribblPointerUp(event) {
+  const skribbl = getSkribblState();
+  if (!state.skribblPainter.isDrawing || state.skribblPainter.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  const point = getSkribblCanvasPoint(event);
+  const points = [...state.skribblPainter.points];
+  const lastPoint = points[points.length - 1];
+
+  if (!lastPoint || lastPoint.x !== point.x || lastPoint.y !== point.y) {
+    points.push(point);
+  }
+
+  state.skribblPainter.isDrawing = false;
+  state.skribblPainter.pointerId = null;
+  state.skribblPainter.points = [];
+
+  if (!skribbl?.canDraw || !points.length) {
+    renderSkribblCanvas(skribbl);
+    return;
+  }
+
+  queueSkribblStrokeUpload({
+    color: state.skribblPainter.color,
+    width: state.skribblPainter.width,
+    points,
+  });
+}
+
+async function joinSkribblRoom() {
+  if (!state.me || state.isSubmittingSkribbl) {
+    return;
+  }
+
+  state.isSubmittingSkribbl = true;
+  renderSkribbl();
+
+  try {
+    const payload = await api("/api/skribbl/join", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+
+    state.me = payload.user;
+    state.skribbl = payload.skribbl;
+    state.bootstrap = {
+      ...state.bootstrap,
+      skribbl: payload.skribbl,
+    };
+    renderMetrics();
+    renderSkribbl();
+    showToast(payload.message, "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.isSubmittingSkribbl = false;
+    renderSkribbl();
+  }
+}
+
+async function leaveSkribblRoom() {
+  if (!state.me || state.isSubmittingSkribbl) {
+    return;
+  }
+
+  state.isSubmittingSkribbl = true;
+  renderSkribbl();
+
+  try {
+    const payload = await api("/api/skribbl/leave", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+
+    state.me = payload.user;
+    state.skribbl = payload.skribbl;
+    state.bootstrap = {
+      ...state.bootstrap,
+      skribbl: payload.skribbl,
+    };
+    renderMetrics();
+    renderSkribbl();
+    showToast(payload.message, "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.isSubmittingSkribbl = false;
+    renderSkribbl();
+  }
+}
+
+async function clearSkribblBoard() {
+  const skribbl = getSkribblState();
+  if (!state.me || state.isSubmittingSkribbl || !skribbl?.canClear) {
+    return;
+  }
+
+  state.isSubmittingSkribbl = true;
+  renderSkribbl();
+
+  try {
+    const payload = await api("/api/skribbl/clear", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+
+    state.me = payload.user;
+    state.skribbl = payload.skribbl;
+    state.bootstrap = {
+      ...state.bootstrap,
+      skribbl: payload.skribbl,
+    };
+    state.skribblPainter.pendingStrokes = [];
+    state.skribblPainter.uploadQueue = [];
+    state.skribblPainter.lastRenderSignature = "";
+    renderSkribbl();
+    showToast(payload.message, "info");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.isSubmittingSkribbl = false;
+    renderSkribbl();
+  }
+}
+
+async function onSkribblGuessSubmit(event) {
+  event.preventDefault();
+  const skribbl = getSkribblState();
+  const guess = elements.skribblGuessInput.value.trim();
+
+  if (!state.me || state.isSubmittingSkribbl || !skribbl?.canGuess || !guess) {
+    return;
+  }
+
+  state.isSubmittingSkribbl = true;
+  renderSkribbl();
+
+  try {
+    const payload = await api("/api/skribbl/guess", {
+      method: "POST",
+      body: JSON.stringify({ guess }),
+    });
+
+    state.me = payload.user;
+    state.skribbl = payload.skribbl;
+    state.bootstrap = {
+      ...state.bootstrap,
+      skribbl: payload.skribbl,
+    };
+    elements.skribblGuessInput.value = "";
+    renderMetrics();
+    renderSkribbl();
+
+    if (payload.isCorrect) {
+      showToast(payload.message, "success");
+    }
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.isSubmittingSkribbl = false;
+    renderSkribbl();
+  }
 }
 
 function getSlotsState() {
@@ -1870,16 +2583,20 @@ function setActiveView(view) {
       ? "poker"
       : view === "connect4"
         ? "connect4"
+        : view === "skribbl"
+          ? "skribbl"
         : view === "slots"
           ? "slots"
           : "roulette";
   elements.viewRouletteButton.classList.toggle("active", state.activeView === "roulette");
   elements.viewPokerButton.classList.toggle("active", state.activeView === "poker");
   elements.viewConnect4Button.classList.toggle("active", state.activeView === "connect4");
+  elements.viewSkribblButton.classList.toggle("active", state.activeView === "skribbl");
   elements.viewSlotsButton.classList.toggle("active", state.activeView === "slots");
   elements.rouletteView.classList.toggle("hidden", state.activeView !== "roulette");
   elements.pokerView.classList.toggle("hidden", state.activeView !== "poker");
   elements.connect4View.classList.toggle("hidden", state.activeView !== "connect4");
+  elements.skribblView.classList.toggle("hidden", state.activeView !== "skribbl");
   elements.slotsView.classList.toggle("hidden", state.activeView !== "slots");
 
   if (state.activeView === "slots" && state.me && !state.isLoadingSlotsView) {
@@ -1892,6 +2609,10 @@ function setActiveView(view) {
 
   if (state.activeView === "connect4") {
     renderConnect4();
+  }
+
+  if (state.activeView === "skribbl") {
+    renderSkribbl();
   }
 
   renderMetrics();
@@ -2707,12 +3428,13 @@ async function maybeSubmitAutoTicket() {
 
 async function onCashoutRequest(event) {
   event.preventDefault();
+  const form = event.currentTarget;
 
   if (state.isSubmittingCashout) {
     return;
   }
 
-  const formData = new FormData(event.currentTarget);
+  const formData = new FormData(form);
   const amount = Number.parseInt(String(formData.get("amount") || ""), 10);
   const note = String(formData.get("note") || "").trim();
 
@@ -2744,7 +3466,7 @@ async function onCashoutRequest(event) {
     renderMetrics();
     renderNotifications(payload.notifications || []);
     renderCashoutSection();
-    event.currentTarget.reset();
+    form.reset();
     showToast(payload.message, "success");
   } catch (error) {
     showToast(error.message, "error");
@@ -2871,6 +3593,7 @@ function tickRoundCountdown() {
   if (!currentRound) {
     renderRoundPanel();
     renderConnect4();
+    renderSkribbl();
     renderPoker();
     return;
   }
@@ -2898,6 +3621,13 @@ function tickRoundCountdown() {
     state.connect4.secondsToNextGame -= 1;
   }
   renderConnect4();
+  if (state.skribbl?.status === "playing" && state.skribbl.secondsToEnd > 0) {
+    state.skribbl.secondsToEnd -= 1;
+  }
+  if (state.skribbl?.status === "showdown" && state.skribbl.secondsToNextRound > 0) {
+    state.skribbl.secondsToNextRound -= 1;
+  }
+  renderSkribbl();
   if (state.poker?.status === "playing" && state.poker.secondsToAct > 0) {
     state.poker.secondsToAct -= 1;
   }
@@ -2931,6 +3661,7 @@ async function handleRoundState(payload) {
   state.cashoutRequests = payload.cashoutRequests || state.cashoutRequests;
   state.connect4 = payload.connect4 || state.connect4;
   syncConnect4StartSoundState(state.connect4);
+  state.skribbl = payload.skribbl || state.skribbl;
   state.poker = payload.poker || state.poker;
   state.selectedPokerTableSlug =
     payload.poker?.selectedTableSlug || state.selectedPokerTableSlug || null;
@@ -2948,6 +3679,7 @@ async function handleRoundState(payload) {
     serverTime: payload.serverTime,
     cashoutRequests: state.cashoutRequests,
     connect4: state.connect4,
+    skribbl: state.skribbl,
     poker: state.poker,
   };
 
@@ -2956,6 +3688,7 @@ async function handleRoundState(payload) {
   renderLastNumbers(payload.lastNumbers);
   renderCashoutSection();
   renderConnect4();
+  renderSkribbl();
   renderPoker();
   updateSpinButtons();
 

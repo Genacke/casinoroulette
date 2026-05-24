@@ -40,6 +40,7 @@
           <div class="feature-list">
             <div class="feature-chip">Roulette 0-36</div>
             <div class="feature-chip">Poker Texas Hold'em</div>
+            <div class="feature-chip">Skribbl podium</div>
             <div class="feature-chip">Machine a sous 96% RTP cible</div>
             <div class="feature-chip">Rounds toutes les 30 s</div>
             <div class="feature-chip">Mise mini 200 000</div>
@@ -126,6 +127,9 @@
             </button>
             <button id="viewConnect4Button" class="tab-button" type="button">
               Puissance 4
+            </button>
+            <button id="viewSkribblButton" class="tab-button" type="button">
+              Skribbl
             </button>
             <button id="viewSlotsButton" class="tab-button" type="button">
               Slots
@@ -443,6 +447,133 @@
                   </div>
                 </div>
                 <div id="connect4ActionLog" class="history-list"></div>
+              </section>
+            </section>
+
+            <section id="skribblView" class="skribbl-grid game-view hidden">
+              <section class="panel skribbl-main-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Skribbl des Douze</p>
+                    <h3>Podium dessin</h3>
+                  </div>
+                  <div class="status-pill" id="skribblStatusBadge">Attente</div>
+                </div>
+
+                <div class="skribbl-stage-layout">
+                  <div class="skribbl-board-panel">
+                    <div class="skribbl-stage-topbar">
+                      <div class="ticket-info">
+                        <span>Pot</span>
+                        <strong id="skribblPotValue">0 kamas</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Dessinateur</span>
+                        <strong id="skribblDrawerValue">En attente</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Sablier</span>
+                        <strong id="skribblTimerValue">01:00</strong>
+                      </div>
+                    </div>
+
+                    <div class="skribbl-prompt-card">
+                      <span id="skribblPromptLabel">Mot</span>
+                      <strong id="skribblPromptValue">En attente</strong>
+                    </div>
+
+                    <div class="skribbl-canvas-shell">
+                      <canvas
+                        id="skribblCanvas"
+                        class="skribbl-canvas"
+                        width="900"
+                        height="520"
+                        aria-label="Tableau Skribbl"
+                      ></canvas>
+                    </div>
+
+                    <div id="skribblToolbar" class="skribbl-toolbar">
+                      <div id="skribblPalette" class="skribbl-palette"></div>
+                      <label class="skribbl-width-box">
+                        <span>Taille</span>
+                        <input id="skribblWidthInput" type="range" min="2" max="28" value="6" />
+                      </label>
+                      <button id="skribblClearButton" class="ghost-button" type="button">
+                        Effacer
+                      </button>
+                    </div>
+
+                    <form id="skribblGuessForm" class="skribbl-guess-form">
+                      <input
+                        id="skribblGuessInput"
+                        type="text"
+                        maxlength="48"
+                        placeholder="Tape ton mot ici"
+                        autocomplete="off"
+                      />
+                      <button id="skribblGuessButton" class="primary-button" type="submit">
+                        Proposer
+                      </button>
+                    </form>
+
+                    <div id="skribblStatusText" class="skribbl-status-text">
+                      La salle de dessin attend ses aventuriers.
+                    </div>
+                  </div>
+
+                  <aside class="skribbl-side-panel">
+                    <div class="panel-header connect4-side-head">
+                      <div>
+                        <p class="eyebrow">Ta place</p>
+                        <h3 id="skribblHeroStatus">Pas assis</h3>
+                      </div>
+                      <div class="poker-action-cluster">
+                        <button id="skribblJoinButton" class="secondary-button" type="button">
+                          Rejoindre
+                        </button>
+                        <button id="skribblLeaveButton" class="ghost-button" type="button">
+                          Quitter
+                        </button>
+                      </div>
+                    </div>
+
+                    <div id="skribblPodium" class="skribbl-podium"></div>
+                    <div id="skribblPlayerList" class="skribbl-player-list"></div>
+
+                    <div class="skribbl-info-grid">
+                      <div class="ticket-info">
+                        <span>Entree</span>
+                        <strong id="skribblEntryFeeValue">100 000 kamas</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Redistribue</span>
+                        <strong id="skribblPrizeValue">0 kamas</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Tour</span>
+                        <strong id="skribblDrawSecondsValue">60 sec</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Maison</span>
+                        <strong id="skribblHouseValue">10%</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Bibliotheque</span>
+                        <strong id="skribblLibraryValue">0 mots</strong>
+                      </div>
+                    </div>
+                  </aside>
+                </div>
+              </section>
+
+              <section class="panel skribbl-log-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Carnet de guesses</p>
+                    <h3>Dernieres propositions</h3>
+                  </div>
+                </div>
+                <div id="skribblGuessFeed" class="history-list"></div>
               </section>
             </section>
 

@@ -361,6 +361,68 @@ async function initializeDatabase() {
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS skribbl_rooms (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      entry_fee INTEGER NOT NULL,
+      draw_seconds INTEGER NOT NULL,
+      showdown_seconds INTEGER NOT NULL,
+      min_players INTEGER NOT NULL DEFAULT 2,
+      max_players INTEGER NOT NULL DEFAULT 8,
+      status TEXT NOT NULL DEFAULT 'waiting'
+        CHECK(status IN ('waiting', 'playing', 'showdown')),
+      round_number INTEGER NOT NULL DEFAULT 0,
+      drawer_user_id INTEGER,
+      drawer_username_snapshot TEXT,
+      current_word TEXT,
+      pot INTEGER NOT NULL DEFAULT 0,
+      phase_deadline TEXT,
+      next_round_at TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(drawer_user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS skribbl_players (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      username_snapshot TEXT NOT NULL,
+      seat_order INTEGER NOT NULL,
+      guessed_correct INTEGER NOT NULL DEFAULT 0,
+      guess_rank INTEGER,
+      joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(room_id) REFERENCES skribbl_rooms(id),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS skribbl_strokes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_id INTEGER NOT NULL,
+      round_number INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      stroke_json TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(room_id) REFERENCES skribbl_rooms(id),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS skribbl_guess_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_id INTEGER NOT NULL,
+      round_number INTEGER NOT NULL,
+      user_id INTEGER,
+      username_snapshot TEXT NOT NULL,
+      guess_text TEXT NOT NULL,
+      normalized_guess TEXT NOT NULL,
+      is_correct INTEGER NOT NULL DEFAULT 0,
+      guess_rank INTEGER,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(room_id) REFERENCES skribbl_rooms(id),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
     CREATE TABLE IF NOT EXISTS slot_sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL UNIQUE,
@@ -434,6 +496,14 @@ async function initializeDatabase() {
       ON poker_action_logs (table_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_connect4_action_logs_table_created
       ON connect4_action_logs (table_id, created_at DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_skribbl_players_room_user
+      ON skribbl_players (room_id, user_id);
+    CREATE INDEX IF NOT EXISTS idx_skribbl_players_room_joined
+      ON skribbl_players (room_id, joined_at ASC);
+    CREATE INDEX IF NOT EXISTS idx_skribbl_strokes_room_round
+      ON skribbl_strokes (room_id, round_number, id ASC);
+    CREATE INDEX IF NOT EXISTS idx_skribbl_guess_logs_room_round
+      ON skribbl_guess_logs (room_id, round_number, id DESC);
     CREATE INDEX IF NOT EXISTS idx_slot_spins_user_created
       ON slot_spins (user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_slot_spins_mode_created

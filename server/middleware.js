@@ -64,6 +64,14 @@ const slotLimiter = rateLimit({
   message: limitMessage("Trop de spins machine a sous envoyes. Attends une seconde."),
 });
 
+const skribblLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 220,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: limitMessage("Trop d'actions Skribbl envoyees. Ralentis un peu."),
+});
+
 const adminLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 45,
@@ -123,6 +131,12 @@ const slotCooldown = createCooldown(
   550,
   (req) => `${req.ip}:${req.user?.id || "guest"}`,
   "Le rouleau vient deja d'etre lance. Laisse-le retomber.",
+);
+
+const skribblCooldown = createCooldown(
+  120,
+  (req) => `${req.ip}:${req.user?.id || "guest"}`,
+  "Le tableau attend un souffle. Reprends juste apres.",
 );
 
 const chatCooldown = createCooldown(
@@ -212,6 +226,8 @@ module.exports = {
   registerLimiter,
   requireAdmin,
   requireAuth,
+  skribblCooldown,
+  skribblLimiter,
   slotCooldown,
   slotLimiter,
   spinCooldown,
