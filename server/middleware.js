@@ -48,6 +48,14 @@ const pokerLimiter = rateLimit({
   message: limitMessage("Trop d'actions poker envoyees. Attends une seconde."),
 });
 
+const connect4Limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 80,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: limitMessage("Trop d'actions Puissance 4 envoyees. Attends une seconde."),
+});
+
 const slotLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 45,
@@ -103,6 +111,12 @@ const pokerCooldown = createCooldown(
   700,
   (req) => `${req.ip}:${req.user?.id || "guest"}`,
   "Une action poker vient deja d'etre envoyee. Doucement.",
+);
+
+const connect4Cooldown = createCooldown(
+  400,
+  (req) => `${req.ip}:${req.user?.id || "guest"}`,
+  "Une action Puissance 4 vient deja d'etre envoyee. Doucement.",
 );
 
 const slotCooldown = createCooldown(
@@ -189,6 +203,8 @@ module.exports = {
   asyncHandler,
   chatCooldown,
   chatLimiter,
+  connect4Cooldown,
+  connect4Limiter,
   loginLimiter,
   optionalAuth,
   pokerCooldown,

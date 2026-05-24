@@ -49,6 +49,8 @@ const state = {
   pendingCashoutRequest: null,
   isSubmittingCashout: false,
   activeView: "roulette",
+  connect4: null,
+  isSubmittingConnect4: false,
   selectedPokerTableSlug: null,
   poker: null,
   isLoadingPokerView: false,
@@ -120,6 +122,23 @@ function cacheElements() {
     clearBetsButton: document.getElementById("clearBetsButton"),
     closeResultModal: document.getElementById("closeResultModal"),
     confirmedTicketValue: document.getElementById("confirmedTicketValue"),
+    connect4ActionLog: document.getElementById("connect4ActionLog"),
+    connect4Board: document.getElementById("connect4Board"),
+    connect4DropRow: document.getElementById("connect4DropRow"),
+    connect4EntryFeeValue: document.getElementById("connect4EntryFeeValue"),
+    connect4HeroStatus: document.getElementById("connect4HeroStatus"),
+    connect4JoinButton: document.getElementById("connect4JoinButton"),
+    connect4LeaveButton: document.getElementById("connect4LeaveButton"),
+    connect4MatchStatus: document.getElementById("connect4MatchStatus"),
+    connect4PotValue: document.getElementById("connect4PotValue"),
+    connect4PrizeValue: document.getElementById("connect4PrizeValue"),
+    connect4SeatList: document.getElementById("connect4SeatList"),
+    connect4StatusBadge: document.getElementById("connect4StatusBadge"),
+    connect4TimerValue: document.getElementById("connect4TimerValue"),
+    connect4TurnHint: document.getElementById("connect4TurnHint"),
+    connect4TurnSecondsValue: document.getElementById("connect4TurnSecondsValue"),
+    connect4TurnValue: document.getElementById("connect4TurnValue"),
+    connect4View: document.getElementById("connect4View"),
     greenMaxValue: document.getElementById("greenMaxValue"),
     historyList: document.getElementById("historyList"),
     lastNumbers: document.getElementById("lastNumbers"),
@@ -145,29 +164,17 @@ function cacheElements() {
     roundStatusValue: document.getElementById("roundStatusValue"),
     roundTimerValue: document.getElementById("roundTimerValue"),
     soundToggle: document.getElementById("soundToggle"),
-    slotBalancingList: document.getElementById("slotBalancingList"),
     slotBetInput: document.getElementById("slotBetInput"),
     slotBetPresets: document.getElementById("slotBetPresets"),
     slotCascadeTrail: document.getElementById("slotCascadeTrail"),
-    slotClientSeedForm: document.getElementById("slotClientSeedForm"),
-    slotClientSeedInput: document.getElementById("slotClientSeedInput"),
-    slotDistributionList: document.getElementById("slotDistributionList"),
-    slotFeatureSummary: document.getElementById("slotFeatureSummary"),
     slotFreeSpinsValue: document.getElementById("slotFreeSpinsValue"),
-    slotHashBadge: document.getElementById("slotHashBadge"),
     slotHistoryList: document.getElementById("slotHistoryList"),
     slotLastWinValue: document.getElementById("slotLastWinValue"),
-    slotMathGrid: document.getElementById("slotMathGrid"),
     slotModeBadge: document.getElementById("slotModeBadge"),
     slotMultiplierValue: document.getElementById("slotMultiplierValue"),
     slotPaylineValue: document.getElementById("slotPaylineValue"),
-    slotPaytable: document.getElementById("slotPaytable"),
-    slotProbabilityTable: document.getElementById("slotProbabilityTable"),
-    slotRefreshStateButton: document.getElementById("slotRefreshStateButton"),
     slotReels: document.getElementById("slotReels"),
-    slotRotateSeedButton: document.getElementById("slotRotateSeedButton"),
-    slotRuleChips: document.getElementById("slotRuleChips"),
-    slotSeedMeta: document.getElementById("slotSeedMeta"),
+    slotSimpleNote: document.getElementById("slotSimpleNote"),
     slotSpinButton: document.getElementById("slotSpinButton"),
     slotStatusText: document.getElementById("slotStatusText"),
     slotsView: document.getElementById("slotsView"),
@@ -177,6 +184,7 @@ function cacheElements() {
     ticketMaxValue: document.getElementById("ticketMaxValue"),
     ticketTotal: document.getElementById("ticketTotal"),
     pendingCashoutCard: document.getElementById("pendingCashoutCard"),
+    viewConnect4Button: document.getElementById("viewConnect4Button"),
     viewPokerButton: document.getElementById("viewPokerButton"),
     viewRouletteButton: document.getElementById("viewRouletteButton"),
     viewSlotsButton: document.getElementById("viewSlotsButton"),
@@ -233,16 +241,17 @@ function bindEvents() {
   elements.readNotificationsButton.addEventListener("click", readAllNotifications);
   elements.viewRouletteButton.addEventListener("click", () => setActiveView("roulette"));
   elements.viewPokerButton.addEventListener("click", () => setActiveView("poker"));
+  elements.viewConnect4Button.addEventListener("click", () => setActiveView("connect4"));
   elements.viewSlotsButton.addEventListener("click", () => setActiveView("slots"));
+  elements.connect4JoinButton.addEventListener("click", joinConnect4Table);
+  elements.connect4LeaveButton.addEventListener("click", leaveConnect4Table);
+  elements.connect4DropRow.addEventListener("click", onConnect4ColumnSelect);
   elements.joinPokerButton.addEventListener("click", joinPokerTable);
   elements.leavePokerButton.addEventListener("click", leavePokerTable);
   elements.pokerFoldButton.addEventListener("click", () => submitPokerAction("fold"));
   elements.pokerCheckCallButton.addEventListener("click", onPokerPrimaryAction);
   elements.pokerRaiseButton.addEventListener("click", onPokerRaise);
   elements.slotSpinButton.addEventListener("click", submitSlotSpin);
-  elements.slotRefreshStateButton.addEventListener("click", () => loadSlotsState(true));
-  elements.slotClientSeedForm.addEventListener("submit", onSlotClientSeedSubmit);
-  elements.slotRotateSeedButton.addEventListener("click", rotateSlotSeedPair);
   elements.slotBetPresets.addEventListener("click", onSlotBetPresetClick);
   elements.slotBetInput.addEventListener("change", onSlotBetInputChange);
   elements.pokerTableList.addEventListener("click", (event) => {
@@ -305,6 +314,7 @@ function applyBootstrap(payload, options = {}) {
   state.me = payload.user;
   state.pendingTicket = payload.pendingTicket || emptyPendingTicket(payload.currentRound?.id);
   state.cashoutRequests = payload.cashoutRequests || [];
+  state.connect4 = payload.connect4 || null;
   state.poker = payload.poker || null;
   state.slots = payload.slots || null;
   state.selectedPokerTableSlug =
@@ -338,6 +348,7 @@ function applyBootstrap(payload, options = {}) {
   renderStats(payload.stats);
   renderChat(payload.chat);
   renderCashoutSection();
+  renderConnect4();
   renderPoker();
   renderSlots();
   renderProbabilityCards(payload.roulette?.probabilities || DEFAULT_PROBABILITIES);
@@ -442,6 +453,8 @@ async function logout() {
   state.cashoutRequests = [];
   state.pendingCashoutRequest = null;
   state.isSubmittingCashout = false;
+  state.connect4 = null;
+  state.isSubmittingConnect4 = false;
   state.selectedPokerTableSlug = null;
   state.poker = null;
   state.isLoadingPokerView = false;
@@ -457,6 +470,7 @@ async function logout() {
   elements.cashoutRequestForm.reset();
   renderBetSlip();
   renderCashoutSection();
+  renderConnect4();
   renderPoker();
   renderSlots();
   showAuth();
@@ -815,6 +829,16 @@ function updateCashoutControls() {
 function renderMetrics() {
   elements.balanceValue.textContent = formatKamas(state.me?.balance);
 
+  if (state.activeView === "connect4" && state.connect4) {
+    elements.metricMinLabel.textContent = "Entree";
+    elements.metricMaxLabel.textContent = "Gain";
+    elements.metricSideLabel.textContent = "Tempo";
+    elements.minBetValue.textContent = formatKamas(state.connect4.entryFee || 0);
+    elements.ticketMaxValue.textContent = formatKamas((state.connect4.entryFee || 0) * 2);
+    elements.greenMaxValue.textContent = `${state.connect4.turnSeconds || 5} sec`;
+    return;
+  }
+
   if (state.activeView === "slots" && state.slots?.config) {
     elements.metricMinLabel.textContent = "Mise mini";
     elements.metricMaxLabel.textContent = "Mise max";
@@ -1048,6 +1072,180 @@ function describeProbability(type) {
   }
 
   return type;
+}
+
+function getConnect4State() {
+  return state.connect4 || state.bootstrap?.connect4 || null;
+}
+
+function formatConnect4SeatLabel(color) {
+  return color === "red" ? "Rouge" : "Jaune";
+}
+
+function formatConnect4Status(connect4) {
+  if (!connect4) {
+    return "Chargement";
+  }
+
+  if (connect4.status === "playing") {
+    return connect4.secondsToAct > 0 ? `En jeu ${connect4.secondsToAct}s` : "En jeu";
+  }
+
+  if (connect4.status === "showdown") {
+    return connect4.secondsToNextGame > 0
+      ? `Fin ${connect4.secondsToNextGame}s`
+      : "Fin";
+  }
+
+  return `Attente ${connect4.seatCount || 0}/2`;
+}
+
+function renderConnect4Board(connect4) {
+  if (!connect4) {
+    elements.connect4DropRow.innerHTML = "";
+    elements.connect4Board.innerHTML = `<div class="empty-state">La table se charge.</div>`;
+    return;
+  }
+
+  const canPlay = connect4.status === "playing" && connect4.myTurn && !state.isSubmittingConnect4;
+  elements.connect4DropRow.innerHTML = Array.from({ length: 7 }, (_unused, columnIndex) => {
+    const columnBlocked = Boolean(connect4.board?.[0]?.[columnIndex]);
+    const disabled = !canPlay || columnBlocked;
+    return `
+      <button
+        class="connect4-drop-button ${disabled ? "" : "is-ready"}"
+        type="button"
+        data-connect4-column="${columnIndex}"
+        ${disabled ? "disabled" : ""}
+      >
+        ${columnIndex + 1}
+      </button>
+    `;
+  }).join("");
+
+  elements.connect4Board.innerHTML = (connect4.board || [])
+    .map(
+      (row) => `
+        <div class="connect4-board-row">
+          ${row
+            .map(
+              (cell) => `
+                <div class="connect4-board-cell">
+                  <span class="connect4-disc ${cell ? `is-${cell}` : "is-empty"}"></span>
+                </div>
+              `,
+            )
+            .join("")}
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderConnect4Log(connect4) {
+  const actions = connect4?.recentActions || [];
+
+  if (!actions.length) {
+    elements.connect4ActionLog.innerHTML = `
+      <div class="empty-state">Aucun duel enregistre pour l'instant.</div>
+    `;
+    return;
+  }
+
+  elements.connect4ActionLog.innerHTML = actions
+    .map(
+      (action) => `
+        <div class="history-item">
+          <div>
+            <strong>${escapeHtml(action.username || "Systeme")}</strong>
+            <div class="history-meta">${formatDate(action.createdAt)}</div>
+          </div>
+          <div class="bet-meta">${escapeHtml(action.details || action.actionType)}</div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderConnect4() {
+  const connect4 = getConnect4State();
+
+  if (!connect4) {
+    elements.connect4StatusBadge.textContent = "Chargement";
+    elements.connect4HeroStatus.textContent = "Pas assis";
+    elements.connect4PotValue.textContent = formatKamas(0);
+    elements.connect4TurnValue.textContent = "En attente";
+    elements.connect4TimerValue.textContent = "00:05";
+    elements.connect4EntryFeeValue.textContent = formatKamas(100000);
+    elements.connect4PrizeValue.textContent = formatKamas(200000);
+    elements.connect4TurnSecondsValue.textContent = "5 sec";
+    elements.connect4SeatList.innerHTML = "";
+    elements.connect4TurnHint.textContent = "Une partie commence des que 2 joueurs sont assis.";
+    elements.connect4MatchStatus.textContent = "Assieds-toi et attends un rival.";
+    renderConnect4Board(null);
+    renderConnect4Log(null);
+    return;
+  }
+
+  elements.connect4StatusBadge.textContent = formatConnect4Status(connect4);
+  elements.connect4HeroStatus.textContent = connect4.myColor
+    ? `Assis en ${formatConnect4SeatLabel(connect4.myColor)}`
+    : "Pas assis";
+  elements.connect4PotValue.textContent = formatKamas(connect4.pot || 0);
+  elements.connect4TurnValue.textContent =
+    connect4.status === "playing"
+      ? connect4.activeUsername || formatConnect4SeatLabel(connect4.activeColor)
+      : connect4.status === "showdown"
+        ? connect4.winnerUsername || "Resolution"
+        : "En attente";
+  elements.connect4TimerValue.textContent = formatCountdown(
+    connect4.status === "playing"
+      ? connect4.secondsToAct
+      : connect4.status === "showdown"
+        ? connect4.secondsToNextGame
+        : connect4.turnSeconds,
+  );
+  elements.connect4EntryFeeValue.textContent = formatKamas(connect4.entryFee || 0);
+  elements.connect4PrizeValue.textContent = formatKamas((connect4.entryFee || 0) * 2);
+  elements.connect4TurnSecondsValue.textContent = `${connect4.turnSeconds || 5} sec`;
+  elements.connect4MatchStatus.textContent = connect4.statusText;
+
+  elements.connect4SeatList.innerHTML = (connect4.seats || [])
+    .map(
+      (seat) => `
+        <article class="connect4-seat-card ${seat.color} ${seat.isMe ? "is-me" : ""} ${seat.occupied ? "" : "empty"}">
+          <strong>${escapeHtml(seat.label)}</strong>
+          <div>${seat.occupied ? escapeHtml(seat.username) : "Libre"}</div>
+          <div class="bet-meta">${seat.isMe ? "Toi" : seat.occupied ? "Pret" : "En attente"}</div>
+        </article>
+      `,
+    )
+    .join("");
+
+  if (connect4.joinBlockedByBalance) {
+    elements.connect4TurnHint.textContent = `Il faut ${formatKamas(connect4.entryFee)} pour entrer.`;
+  } else if (connect4.myTurn) {
+    elements.connect4TurnHint.textContent = `A toi de jouer, tu as ${connect4.secondsToAct}s.`;
+  } else if (connect4.myColor && connect4.status === "playing") {
+    elements.connect4TurnHint.textContent = `Patiente, ${connect4.activeUsername || "ton rival"} joue.`;
+  } else if (connect4.status === "showdown") {
+    elements.connect4TurnHint.textContent =
+      connect4.winnerReason === "draw"
+        ? "Match nul, la table se vide apres le compte a rebours."
+        : `Reprise dans ${connect4.secondsToNextGame}s.`;
+  } else {
+    elements.connect4TurnHint.textContent = "Une partie commence des que 2 joueurs sont assis.";
+  }
+
+  elements.connect4JoinButton.disabled =
+    state.isSubmittingConnect4 || !connect4.canJoin;
+  elements.connect4LeaveButton.disabled =
+    state.isSubmittingConnect4 || !connect4.canLeave;
+  elements.connect4LeaveButton.textContent =
+    connect4.status === "playing" && connect4.myColor ? "Abandonner" : "Quitter";
+
+  renderConnect4Board(connect4);
+  renderConnect4Log(connect4);
 }
 
 function getSlotsState() {
@@ -1402,15 +1600,10 @@ function renderSlots() {
   if (!slotState) {
     elements.slotModeBadge.textContent = "Chargement";
     elements.slotStatusText.textContent = "La machine a sous se charge...";
-    elements.slotFeatureSummary.textContent = "Lecture des configurations serveur.";
-    elements.slotRuleChips.innerHTML = "";
-    elements.slotPaytable.innerHTML = `<div class="empty-state">Chargement...</div>`;
-    elements.slotProbabilityTable.innerHTML = `<div class="empty-state">Chargement...</div>`;
+    elements.slotSimpleNote.textContent = "Lecture des configurations serveur.";
     elements.slotHistoryList.innerHTML = `<div class="empty-state">Chargement...</div>`;
-    elements.slotMathGrid.innerHTML = "";
-    elements.slotDistributionList.innerHTML = "";
-    elements.slotBalancingList.innerHTML = "";
     renderSlotGrid(null);
+    elements.slotSpinButton.disabled = true;
     return;
   }
 
@@ -1430,45 +1623,28 @@ function renderSlots() {
   elements.slotMultiplierValue.textContent = `x${isBonus ? bonus.currentMultiplier : 1}`;
   elements.slotStatusText.textContent = latestSummary
     ? latestSummary.bigHit
-      ? `Big hit ${formatKamas(latestSummary.totalWin)} sur ${latestSummary.cascadeCount} cascade(s).`
+      ? `Gros hit ${formatKamas(latestSummary.totalWin)}.`
       : latestSummary.freeSpinsAwarded > 0
         ? `${latestSummary.freeSpinsAwarded} free spins remportes.`
         : latestSummary.nearMiss
-          ? "Deux scatters tombes, le bonus a failli partir."
+          ? "Deux scatters, le bonus etait tout proche."
           : latestSummary.hit
-            ? `${latestSummary.cascadeCount} cascade(s) et ${formatKamas(latestSummary.totalWin)} payes.`
-            : "Spin sec. Les rouleaux repartent a la prochaine mise."
+            ? `${formatKamas(latestSummary.totalWin)} tombent sur ce spin.`
+            : "Rien sur ce spin, les rouleaux repartent."
     : "La machine attend ton premier spin.";
-  elements.slotFeatureSummary.textContent =
+  elements.slotSimpleNote.textContent =
     bonus.freeSpinsRemaining > 0
-      ? `Bet verrouille a ${formatKamas(bonus.lockedBet)} pendant la feature. Le multiplicateur grimpe apres chaque cascade gagnante.`
-      : "3 scatters declenchent les free spins. Les wilds sont plus frequents pendant le bonus.";
-
-  elements.slotRuleChips.innerHTML = `
-    <span>RTP cible ${slotState.config.targetRtp}%</span>
-    <span>House edge ${slotState.config.targetHouseEdge}%</span>
-    <span>Volatilite ${escapeHtml(slotState.config.volatility)}</span>
-    <span>Hit ${escapeHtml(slotState.config.targetHitFrequency)}</span>
-    <span>Bonus ${escapeHtml(slotState.config.targetBonusFrequency)}</span>
-    <span>Max win x${slotState.config.maxWinMultiplier}</span>
-  `;
+      ? `Free spins en cours a ${formatKamas(bonus.lockedBet)} avec multiplicateur progressif.`
+      : "Choisis ta mise puis lance. 3 scatters declenchent les free spins.";
 
   syncSlotBetInput();
   buildSlotBetPresets();
   renderSlotGrid();
   renderSlotCascadeTrail(latestSummary);
-  renderSlotPaytable(slotState);
-  renderSlotProbabilityTable(slotState);
-  renderSlotMath(slotState);
   renderSlotHistory(slotState);
-  renderSlotSeedState(slotState);
 
   elements.slotSpinButton.disabled = state.isSubmittingSlotSpin || state.isSubmittingSlotSeed;
   elements.slotSpinButton.textContent = isBonus ? "Lancer le free spin" : "Lancer";
-  elements.slotRefreshStateButton.disabled = state.isLoadingSlotsView || state.isSubmittingSlotSpin;
-  elements.slotRotateSeedButton.disabled =
-    state.isSubmittingSlotSeed || !slotState.provablyFair?.canRotate;
-  elements.slotClientSeedInput.disabled = state.isSubmittingSlotSeed;
 }
 
 async function loadSlotsState(showToastOnError = false) {
@@ -1666,12 +1842,20 @@ async function rotateSlotSeedPair() {
 
 function setActiveView(view) {
   state.activeView =
-    view === "poker" ? "poker" : view === "slots" ? "slots" : "roulette";
+    view === "poker"
+      ? "poker"
+      : view === "connect4"
+        ? "connect4"
+        : view === "slots"
+          ? "slots"
+          : "roulette";
   elements.viewRouletteButton.classList.toggle("active", state.activeView === "roulette");
   elements.viewPokerButton.classList.toggle("active", state.activeView === "poker");
+  elements.viewConnect4Button.classList.toggle("active", state.activeView === "connect4");
   elements.viewSlotsButton.classList.toggle("active", state.activeView === "slots");
   elements.rouletteView.classList.toggle("hidden", state.activeView !== "roulette");
   elements.pokerView.classList.toggle("hidden", state.activeView !== "poker");
+  elements.connect4View.classList.toggle("hidden", state.activeView !== "connect4");
   elements.slotsView.classList.toggle("hidden", state.activeView !== "slots");
 
   if (state.activeView === "slots" && state.me && !state.isLoadingSlotsView) {
@@ -1682,7 +1866,122 @@ function setActiveView(view) {
     }
   }
 
+  if (state.activeView === "connect4") {
+    renderConnect4();
+  }
+
   renderMetrics();
+}
+
+function onConnect4ColumnSelect(event) {
+  const button = event.target.closest("[data-connect4-column]");
+  if (!button) {
+    return;
+  }
+
+  submitConnect4Move(button.dataset.connect4Column);
+}
+
+async function joinConnect4Table() {
+  if (!state.me || state.isSubmittingConnect4) {
+    return;
+  }
+
+  state.isSubmittingConnect4 = true;
+  renderConnect4();
+
+  try {
+    const payload = await api("/api/connect4/join", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+
+    state.me = payload.user;
+    state.connect4 = payload.connect4;
+    state.bootstrap = {
+      ...state.bootstrap,
+      connect4: payload.connect4,
+    };
+    renderMetrics();
+    renderConnect4();
+    showToast(payload.message, "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.isSubmittingConnect4 = false;
+    renderConnect4();
+  }
+}
+
+async function leaveConnect4Table() {
+  if (!state.me || state.isSubmittingConnect4) {
+    return;
+  }
+
+  state.isSubmittingConnect4 = true;
+  renderConnect4();
+
+  try {
+    const payload = await api("/api/connect4/leave", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+
+    state.me = payload.user;
+    state.connect4 = payload.connect4;
+    state.bootstrap = {
+      ...state.bootstrap,
+      connect4: payload.connect4,
+    };
+    renderMetrics();
+    renderConnect4();
+    showToast(payload.message, "success");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.isSubmittingConnect4 = false;
+    renderConnect4();
+  }
+}
+
+async function submitConnect4Move(column) {
+  const connect4 = getConnect4State();
+
+  if (
+    !state.me
+    || state.isSubmittingConnect4
+    || !connect4
+    || connect4.status !== "playing"
+    || !connect4.myTurn
+  ) {
+    return;
+  }
+
+  state.isSubmittingConnect4 = true;
+  renderConnect4();
+
+  try {
+    const payload = await api("/api/connect4/move", {
+      method: "POST",
+      body: JSON.stringify({
+        column: Number(column),
+      }),
+    });
+
+    state.me = payload.user;
+    state.connect4 = payload.connect4;
+    state.bootstrap = {
+      ...state.bootstrap,
+      connect4: payload.connect4,
+    };
+    renderMetrics();
+    renderConnect4();
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.isSubmittingConnect4 = false;
+    renderConnect4();
+  }
 }
 
 function getPokerState() {
@@ -2533,7 +2832,7 @@ function resetRoundTimers() {
 
   state.roundPollTimer = window.setInterval(() => {
     pollRoundState();
-  }, 3000);
+  }, 1000);
 
   state.countdownTimer = window.setInterval(() => {
     tickRoundCountdown();
@@ -2544,6 +2843,7 @@ function tickRoundCountdown() {
   const currentRound = state.bootstrap?.currentRound;
   if (!currentRound) {
     renderRoundPanel();
+    renderConnect4();
     renderPoker();
     return;
   }
@@ -2564,6 +2864,13 @@ function tickRoundCountdown() {
   }
 
   renderRoundPanel();
+  if (state.connect4?.status === "playing" && state.connect4.secondsToAct > 0) {
+    state.connect4.secondsToAct -= 1;
+  }
+  if (state.connect4?.status === "showdown" && state.connect4.secondsToNextGame > 0) {
+    state.connect4.secondsToNextGame -= 1;
+  }
+  renderConnect4();
   if (state.poker?.status === "playing" && state.poker.secondsToAct > 0) {
     state.poker.secondsToAct -= 1;
   }
@@ -2595,6 +2902,7 @@ async function handleRoundState(payload) {
   state.me = payload.user;
   state.pendingTicket = payload.pendingTicket || emptyPendingTicket(payload.currentRound?.id);
   state.cashoutRequests = payload.cashoutRequests || state.cashoutRequests;
+  state.connect4 = payload.connect4 || state.connect4;
   state.poker = payload.poker || state.poker;
   state.selectedPokerTableSlug =
     payload.poker?.selectedTableSlug || state.selectedPokerTableSlug || null;
@@ -2611,6 +2919,7 @@ async function handleRoundState(payload) {
     lastNumbers: payload.lastNumbers,
     serverTime: payload.serverTime,
     cashoutRequests: state.cashoutRequests,
+    connect4: state.connect4,
     poker: state.poker,
   };
 
@@ -2618,6 +2927,7 @@ async function handleRoundState(payload) {
   renderRoundPanel();
   renderLastNumbers(payload.lastNumbers);
   renderCashoutSection();
+  renderConnect4();
   renderPoker();
   updateSpinButtons();
 

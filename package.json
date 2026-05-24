@@ -8,7 +8,7 @@
     "start": "node server/app.js",
     "seed": "node database/seed.js",
     "slots:simulate": "node database/simulate-slots.js",
-    "check": "node --check server/app.js && node --check server/config.js && node --check server/db.js && node --check server/rounds.js && node --check server/poker.js && node --check server/slots.js && node --check routes/auth.routes.js && node --check routes/game.routes.js && node --check routes/admin.routes.js && node --check routes/poker.routes.js && node --check routes/slots.routes.js && node --check client/app.js && node --check admin/app.js && node --check database/simulate-slots.js"
+    "check": "node --check server/app.js && node --check server/config.js && node --check server/db.js && node --check server/rounds.js && node --check server/poker.js && node --check server/connect4.js && node --check server/slots.js && node --check routes/auth.routes.js && node --check routes/game.routes.js && node --check routes/admin.routes.js && node --check routes/poker.routes.js && node --check routes/connect4.routes.js && node --check routes/slots.routes.js && node --check client/app.js && node --check admin/app.js && node --check database/simulate-slots.js"
   },
   "keywords": [
     "roulette",

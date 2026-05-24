@@ -22,6 +22,7 @@ const {
   getRecentRoundNumbers,
   setPlayerTicket,
 } = require("../server/rounds");
+const { buildConnect4State } = require("../server/connect4");
 const { buildPokerState } = require("../server/poker");
 const { buildSlotState } = require("../server/slots");
 const { normalizeMessage, parsePositiveInteger } = require("../server/utils");
@@ -216,6 +217,7 @@ async function getPlayerBootstrap(userId, pokerTableSlug = null) {
     chat,
     notifications,
     cashoutRequests,
+    connect4,
     poker,
     slots,
   ] = await Promise.all([
@@ -226,6 +228,7 @@ async function getPlayerBootstrap(userId, pokerTableSlug = null) {
     getChatMessages(),
     getNotifications(userId),
     getCashoutRequests(userId),
+    buildConnect4State(userId),
     buildPokerState(userId, pokerTableSlug),
     buildSlotState(userId),
   ]);
@@ -246,6 +249,7 @@ async function getPlayerBootstrap(userId, pokerTableSlug = null) {
     latestResolvedRound: roundState.latestResolvedRound,
     latestPlayerSpin: roundState.latestPlayerSpin,
     serverTime: roundState.serverTime,
+    connect4,
     poker,
     slots,
     cashout: {
@@ -284,9 +288,10 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const pokerTableSlug = req.query?.table || null;
-    const [roundState, cashoutRequests, poker] = await Promise.all([
+    const [roundState, cashoutRequests, connect4, poker] = await Promise.all([
       buildRoundState(req.user.id),
       getCashoutRequests(req.user.id),
+      buildConnect4State(req.user.id),
       buildPokerState(req.user.id, pokerTableSlug),
     ]);
 
@@ -302,6 +307,7 @@ router.get(
       cashoutRequests,
       pendingCashoutRequest:
         cashoutRequests.find((request) => request.status === "pending") || null,
+      connect4,
       poker,
     });
   }),

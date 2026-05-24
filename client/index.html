@@ -124,6 +124,9 @@
             <button id="viewPokerButton" class="tab-button" type="button">
               Poker
             </button>
+            <button id="viewConnect4Button" class="tab-button" type="button">
+              Puissance 4
+            </button>
             <button id="viewSlotsButton" class="tab-button" type="button">
               Slots
             </button>
@@ -359,6 +362,91 @@
               </section>
             </section>
 
+            <section id="connect4View" class="connect4-grid game-view hidden">
+              <section class="panel connect4-board-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Puissance 4 Blitz</p>
+                    <h3>Duel 1v1</h3>
+                  </div>
+                  <div class="status-pill" id="connect4StatusBadge">Table libre</div>
+                </div>
+
+                <div class="connect4-stage-layout">
+                  <div class="connect4-board-shell">
+                    <div class="connect4-board-topbar">
+                      <div class="ticket-info">
+                        <span>Pot</span>
+                        <strong id="connect4PotValue">0 kamas</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Tour</span>
+                        <strong id="connect4TurnValue">En attente</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Tempo</span>
+                        <strong id="connect4TimerValue">00:05</strong>
+                      </div>
+                    </div>
+
+                    <div id="connect4DropRow" class="connect4-drop-row"></div>
+                    <div id="connect4Board" class="connect4-board"></div>
+                    <div id="connect4MatchStatus" class="connect4-match-status">
+                      Assieds-toi et attends un rival.
+                    </div>
+                  </div>
+
+                  <aside class="connect4-side-card">
+                    <div class="panel-header connect4-side-head">
+                      <div>
+                        <p class="eyebrow">Ta place</p>
+                        <h3 id="connect4HeroStatus">Pas assis</h3>
+                      </div>
+                      <div class="poker-action-cluster">
+                        <button id="connect4JoinButton" class="secondary-button" type="button">
+                          Rejoindre
+                        </button>
+                        <button id="connect4LeaveButton" class="ghost-button" type="button">
+                          Quitter
+                        </button>
+                      </div>
+                    </div>
+
+                    <div id="connect4SeatList" class="connect4-seat-list"></div>
+
+                    <div class="connect4-info-grid">
+                      <div class="ticket-info">
+                        <span>Entree</span>
+                        <strong id="connect4EntryFeeValue">100 000 kamas</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Gain</span>
+                        <strong id="connect4PrizeValue">200 000 kamas</strong>
+                      </div>
+                      <div class="ticket-info">
+                        <span>Temps / coup</span>
+                        <strong id="connect4TurnSecondsValue">5 sec</strong>
+                      </div>
+                    </div>
+
+                    <div id="connect4TurnHint" class="bet-meta">
+                      Une partie commence des que 2 joueurs sont assis.
+                    </div>
+                  </aside>
+                </div>
+              </section>
+
+              <section class="panel connect4-log-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Journal de duel</p>
+                    <h3>Dernieres actions</h3>
+                  </div>
+                </div>
+                <div id="connect4ActionLog" class="history-list"></div>
+              </section>
+            </section>
+
             <section id="slotsView" class="slots-grid game-view hidden">
               <section class="panel slots-machine-panel">
                 <div class="panel-header">
@@ -368,7 +456,6 @@
                   </div>
                   <div class="slot-machine-badges">
                     <span class="status-pill" id="slotModeBadge">Base game</span>
-                    <span class="status-pill" id="slotHashBadge">Seed --</span>
                   </div>
                 </div>
 
@@ -425,81 +512,12 @@
                       <button id="slotSpinButton" class="primary-button" type="button">
                         Lancer
                       </button>
-                      <button id="slotRefreshStateButton" class="ghost-button" type="button">
-                        Rafraichir
-                      </button>
                     </div>
 
-                    <div class="slot-rule-chips" id="slotRuleChips"></div>
-                    <div id="slotFeatureSummary" class="bet-meta">
+                    <div id="slotSimpleNote" class="bet-meta">
                       3 scatters declenchent les free spins.
                     </div>
                   </aside>
-                </div>
-              </section>
-
-              <section class="panel slots-paytable-panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow">Paiements</p>
-                    <h3>Table des symboles</h3>
-                  </div>
-                </div>
-                <div id="slotPaytable" class="slot-paytable-grid"></div>
-              </section>
-
-              <section class="panel slots-math-panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow">Maths & fair play</p>
-                    <h3>Equilibrage machine</h3>
-                  </div>
-                </div>
-
-                <div id="slotMathGrid" class="slot-math-grid"></div>
-
-                <div class="slot-math-layout">
-                  <div class="sub-panel slot-probability-panel">
-                    <div class="section-title">Probabilites par symbole</div>
-                    <div id="slotProbabilityTable" class="table-shell"></div>
-                  </div>
-
-                  <div class="sub-panel slot-provably-panel">
-                    <div class="section-title">Provably fair</div>
-                    <div id="slotSeedMeta" class="bet-meta"></div>
-                    <form id="slotClientSeedForm" class="cashout-form">
-                      <label>
-                        <span>Client seed</span>
-                        <input
-                          id="slotClientSeedInput"
-                          type="text"
-                          minlength="3"
-                          maxlength="48"
-                          placeholder="Ex: amakna-123"
-                          required
-                        />
-                      </label>
-                      <div class="slot-action-row">
-                        <button class="secondary-button" type="submit">
-                          Mettre a jour
-                        </button>
-                        <button id="slotRotateSeedButton" class="ghost-button" type="button">
-                          Tourner les seeds
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-
-                <div class="slot-math-layout">
-                  <div class="sub-panel">
-                    <div class="section-title">Distribution des gains</div>
-                    <div id="slotDistributionList" class="leaderboard-list"></div>
-                  </div>
-                  <div class="sub-panel">
-                    <div class="section-title">Strategie d'equilibrage</div>
-                    <div id="slotBalancingList" class="notification-list"></div>
-                  </div>
                 </div>
               </section>
 

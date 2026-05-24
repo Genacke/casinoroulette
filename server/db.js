@@ -7,6 +7,7 @@ const { hashPassword } = require("./auth");
 fs.mkdirSync(path.dirname(config.dbPath), { recursive: true });
 
 const db = new sqlite3.Database(config.dbPath);
+let transactionQueue = Promise.resolve();
 
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {
@@ -77,16 +78,25 @@ async function ensureColumn(tableName, columnName, definition) {
 }
 
 async function withTransaction(callback) {
-  await exec("BEGIN IMMEDIATE TRANSACTION");
+  const transactionRun = transactionQueue.then(async () => {
+    await exec("BEGIN IMMEDIATE TRANSACTION");
 
-  try {
-    const result = await callback();
-    await exec("COMMIT");
-    return result;
-  } catch (error) {
-    await exec("ROLLBACK");
-    throw error;
-  }
+    try {
+      const result = await callback();
+      await exec("COMMIT");
+      return result;
+    } catch (error) {
+      await exec("ROLLBACK");
+      throw error;
+    }
+  });
+
+  transactionQueue = transactionRun.then(
+    () => undefined,
+    () => undefined,
+  );
+
+  return transactionRun;
 }
 
 async function initializeDatabase() {
@@ -304,6 +314,53 @@ async function initializeDatabase() {
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS connect4_tables (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      entry_fee INTEGER NOT NULL,
+      turn_seconds INTEGER NOT NULL,
+      showdown_seconds INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'waiting'
+        CHECK(status IN ('waiting', 'playing', 'showdown')),
+      board_json TEXT NOT NULL DEFAULT '[]',
+      red_user_id INTEGER,
+      red_username_snapshot TEXT,
+      yellow_user_id INTEGER,
+      yellow_username_snapshot TEXT,
+      active_color TEXT
+        CHECK(active_color IN ('red', 'yellow')),
+      active_user_id INTEGER,
+      winner_user_id INTEGER,
+      winner_color TEXT
+        CHECK(winner_color IN ('red', 'yellow')),
+      winner_reason TEXT,
+      pot INTEGER NOT NULL DEFAULT 0,
+      move_count INTEGER NOT NULL DEFAULT 0,
+      action_deadline TEXT,
+      next_game_at TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(red_user_id) REFERENCES users(id),
+      FOREIGN KEY(yellow_user_id) REFERENCES users(id),
+      FOREIGN KEY(active_user_id) REFERENCES users(id),
+      FOREIGN KEY(winner_user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS connect4_action_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      table_id INTEGER NOT NULL,
+      user_id INTEGER,
+      username_snapshot TEXT NOT NULL,
+      action_type TEXT NOT NULL,
+      color TEXT,
+      column_no INTEGER,
+      row_no INTEGER,
+      details TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(table_id) REFERENCES connect4_tables(id),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
     CREATE TABLE IF NOT EXISTS slot_sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL UNIQUE,
@@ -375,6 +432,8 @@ async function initializeDatabase() {
       ON poker_seats (table_id, seat_no);
     CREATE INDEX IF NOT EXISTS idx_poker_action_logs_table_created
       ON poker_action_logs (table_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_connect4_action_logs_table_created
+      ON connect4_action_logs (table_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_slot_spins_user_created
       ON slot_spins (user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_slot_spins_mode_created
