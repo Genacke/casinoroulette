@@ -1175,10 +1175,10 @@ function renderConnect4() {
     elements.connect4HeroStatus.textContent = "Pas assis";
     elements.connect4PotValue.textContent = formatKamas(0);
     elements.connect4TurnValue.textContent = "En attente";
-    elements.connect4TimerValue.textContent = "00:05";
+    elements.connect4TimerValue.textContent = "00:07";
     elements.connect4EntryFeeValue.textContent = formatKamas(100000);
     elements.connect4PrizeValue.textContent = formatKamas(200000);
-    elements.connect4TurnSecondsValue.textContent = "5 sec";
+    elements.connect4TurnSecondsValue.textContent = "7 sec";
     elements.connect4SeatList.innerHTML = "";
     elements.connect4TurnHint.textContent = "Une partie commence des que 2 joueurs sont assis.";
     elements.connect4MatchStatus.textContent = "Assieds-toi et attends un rival.";
@@ -1203,11 +1203,11 @@ function renderConnect4() {
       ? connect4.secondsToAct
       : connect4.status === "showdown"
         ? connect4.secondsToNextGame
-        : connect4.turnSeconds,
+        : connect4.turnSeconds || 7,
   );
   elements.connect4EntryFeeValue.textContent = formatKamas(connect4.entryFee || 0);
   elements.connect4PrizeValue.textContent = formatKamas((connect4.entryFee || 0) * 2);
-  elements.connect4TurnSecondsValue.textContent = `${connect4.turnSeconds || 5} sec`;
+  elements.connect4TurnSecondsValue.textContent = `${connect4.turnSeconds || 7} sec`;
   elements.connect4MatchStatus.textContent = connect4.statusText;
 
   elements.connect4SeatList.innerHTML = (connect4.seats || [])

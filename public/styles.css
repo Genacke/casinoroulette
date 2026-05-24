@@ -785,17 +785,23 @@ textarea:focus {
 .connect4-stage-layout {
   margin-top: 16px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 14px;
   align-items: start;
 }
 
 .connect4-board-shell,
 .connect4-side-card {
-  padding: 16px;
-  border-radius: 26px;
+  padding: 14px;
+  border-radius: 24px;
   border: 1px solid rgba(216, 181, 102, 0.12);
   background: rgba(9, 8, 8, 0.44);
+}
+
+.connect4-board-shell {
+  width: 100%;
+  max-width: 980px;
+  justify-self: center;
 }
 
 .connect4-board-topbar,
@@ -807,23 +813,24 @@ textarea:focus {
 
 .connect4-board-topbar {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .connect4-drop-row {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .connect4-drop-button {
-  min-height: 42px;
-  border-radius: 14px;
+  min-height: 34px;
+  border-radius: 12px;
   border: 1px solid rgba(216, 181, 102, 0.12);
   background: rgba(255, 255, 255, 0.03);
   color: var(--muted);
   font: inherit;
+  font-size: 0.9rem;
   cursor: pointer;
 }
 
@@ -839,9 +846,9 @@ textarea:focus {
 
 .connect4-board {
   display: grid;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 24px;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 22px;
   border: 1px solid rgba(216, 181, 102, 0.12);
   background:
     radial-gradient(circle at top center, rgba(239, 174, 84, 0.06), transparent 44%),
@@ -850,14 +857,14 @@ textarea:focus {
 
 .connect4-board-row {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .connect4-board-cell {
   aspect-ratio: 1;
-  min-height: 56px;
-  border-radius: 18px;
+  min-height: 44px;
+  border-radius: 16px;
   display: grid;
   place-items: center;
   background:
@@ -867,7 +874,7 @@ textarea:focus {
 }
 
 .connect4-disc {
-  width: min(72%, 50px);
+  width: min(66%, 40px);
   aspect-ratio: 1;
   border-radius: 50%;
   display: block;
@@ -893,8 +900,8 @@ textarea:focus {
 }
 
 .connect4-match-status {
-  margin-top: 12px;
-  padding: 12px 14px;
+  margin-top: 10px;
+  padding: 10px 12px;
   border-radius: 16px;
   border: 1px solid rgba(216, 181, 102, 0.1);
   background: rgba(255, 255, 255, 0.03);
@@ -906,12 +913,12 @@ textarea:focus {
 }
 
 .connect4-seat-list {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .connect4-seat-card {
-  padding: 12px;
-  border-radius: 18px;
+  padding: 10px;
+  border-radius: 16px;
   border: 1px solid rgba(216, 181, 102, 0.1);
   background: rgba(255, 255, 255, 0.03);
 }
@@ -933,7 +940,7 @@ textarea:focus {
 }
 
 .connect4-info-grid {
-  margin-top: 12px;
+  margin-top: 10px;
   grid-template-columns: 1fr;
 }
 

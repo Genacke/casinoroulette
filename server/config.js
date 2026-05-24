@@ -38,7 +38,7 @@ const config = {
   pokerTurnSeconds: toInt(process.env.POKER_TURN_SECONDS, 25),
   pokerShowdownSeconds: toInt(process.env.POKER_SHOWDOWN_SECONDS, 10),
   connect4EntryFee: toInt(process.env.CONNECT4_ENTRY_FEE, 100000),
-  connect4TurnSeconds: toInt(process.env.CONNECT4_TURN_SECONDS, 5),
+  connect4TurnSeconds: toInt(process.env.CONNECT4_TURN_SECONDS, 7),
   connect4ShowdownSeconds: toInt(process.env.CONNECT4_SHOWDOWN_SECONDS, 6),
   slotMinBet: toInt(process.env.SLOT_MIN_BET, 100000),
   slotMaxBet: toInt(process.env.SLOT_MAX_BET, 1000000),
