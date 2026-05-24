@@ -124,7 +124,6 @@ function cacheElements() {
     confirmedTicketValue: document.getElementById("confirmedTicketValue"),
     connect4ActionLog: document.getElementById("connect4ActionLog"),
     connect4Board: document.getElementById("connect4Board"),
-    connect4DropRow: document.getElementById("connect4DropRow"),
     connect4EntryFeeValue: document.getElementById("connect4EntryFeeValue"),
     connect4HeroStatus: document.getElementById("connect4HeroStatus"),
     connect4JoinButton: document.getElementById("connect4JoinButton"),
@@ -245,7 +244,7 @@ function bindEvents() {
   elements.viewSlotsButton.addEventListener("click", () => setActiveView("slots"));
   elements.connect4JoinButton.addEventListener("click", joinConnect4Table);
   elements.connect4LeaveButton.addEventListener("click", leaveConnect4Table);
-  elements.connect4DropRow.addEventListener("click", onConnect4ColumnSelect);
+  elements.connect4Board.addEventListener("click", onConnect4ColumnSelect);
   elements.joinPokerButton.addEventListener("click", joinPokerTable);
   elements.leavePokerButton.addEventListener("click", leavePokerTable);
   elements.pokerFoldButton.addEventListener("click", () => submitPokerAction("fold"));
@@ -1102,39 +1101,34 @@ function formatConnect4Status(connect4) {
 
 function renderConnect4Board(connect4) {
   if (!connect4) {
-    elements.connect4DropRow.innerHTML = "";
     elements.connect4Board.innerHTML = `<div class="empty-state">La table se charge.</div>`;
     return;
   }
 
   const canPlay = connect4.status === "playing" && connect4.myTurn && !state.isSubmittingConnect4;
-  elements.connect4DropRow.innerHTML = Array.from({ length: 7 }, (_unused, columnIndex) => {
-    const columnBlocked = Boolean(connect4.board?.[0]?.[columnIndex]);
-    const disabled = !canPlay || columnBlocked;
-    return `
-      <button
-        class="connect4-drop-button ${disabled ? "" : "is-ready"}"
-        type="button"
-        data-connect4-column="${columnIndex}"
-        ${disabled ? "disabled" : ""}
-      >
-        ${columnIndex + 1}
-      </button>
-    `;
-  }).join("");
+  const playableColumns = new Set(
+    Array.from({ length: 7 }, (_unused, columnIndex) => columnIndex).filter(
+      (columnIndex) => canPlay && !connect4.board?.[0]?.[columnIndex],
+    ),
+  );
 
   elements.connect4Board.innerHTML = (connect4.board || [])
     .map(
-      (row) => `
+      (row, rowIndex) => `
         <div class="connect4-board-row">
           ${row
-            .map(
-              (cell) => `
-                <div class="connect4-board-cell">
+            .map((cell, columnIndex) => {
+              const isPlayable = playableColumns.has(columnIndex);
+              return `
+                <div
+                  class="connect4-board-cell ${isPlayable ? "is-playable" : ""}"
+                  data-connect4-column="${columnIndex}"
+                  data-connect4-row="${rowIndex}"
+                >
                   <span class="connect4-disc ${cell ? `is-${cell}` : "is-empty"}"></span>
                 </div>
-              `,
-            )
+              `;
+            })
             .join("")}
         </div>
       `,
@@ -1225,7 +1219,7 @@ function renderConnect4() {
   if (connect4.joinBlockedByBalance) {
     elements.connect4TurnHint.textContent = `Il faut ${formatKamas(connect4.entryFee)} pour entrer.`;
   } else if (connect4.myTurn) {
-    elements.connect4TurnHint.textContent = `A toi de jouer, tu as ${connect4.secondsToAct}s.`;
+    elements.connect4TurnHint.textContent = `A toi de jouer, tu as ${connect4.secondsToAct}s. Clique sur une colonne en surbrillance.`;
   } else if (connect4.myColor && connect4.status === "playing") {
     elements.connect4TurnHint.textContent = `Patiente, ${connect4.activeUsername || "ton rival"} joue.`;
   } else if (connect4.status === "showdown") {
@@ -1874,12 +1868,12 @@ function setActiveView(view) {
 }
 
 function onConnect4ColumnSelect(event) {
-  const button = event.target.closest("[data-connect4-column]");
-  if (!button) {
+  const cell = event.target.closest(".connect4-board-cell[data-connect4-column]");
+  if (!cell) {
     return;
   }
 
-  submitConnect4Move(button.dataset.connect4Column);
+  submitConnect4Move(cell.dataset.connect4Column);
 }
 
 async function joinConnect4Table() {
