@@ -20,10 +20,6 @@ const config = {
   cookieName: "roulette_session",
   houseEdgePercent: Number(process.env.HOUSE_EDGE_PERCENT || 2),
   cashoutFeePercent: Number(process.env.CASHOUT_FEE_PERCENT || 2),
-  jackpotContributionPercent: Number(
-    process.env.JACKPOT_CONTRIBUTION_PERCENT || 0,
-  ),
-  initialJackpotPool: toInt(process.env.INITIAL_JACKPOT_POOL, 0),
   minBet: toInt(process.env.MIN_BET, 200000),
   maxBet: toInt(process.env.MAX_BET, 2000000),
   greenMaxBet: toInt(process.env.GREEN_MAX_BET, 500000),

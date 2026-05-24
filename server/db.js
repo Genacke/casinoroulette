@@ -89,24 +89,6 @@ async function withTransaction(callback) {
   }
 }
 
-async function setSetting(key, value) {
-  await run(
-    `
-      INSERT INTO settings (key, value, updated_at)
-      VALUES (?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(key) DO UPDATE SET
-        value = excluded.value,
-        updated_at = CURRENT_TIMESTAMP
-    `,
-    [key, String(value)],
-  );
-}
-
-async function getSetting(key, fallback = null) {
-  const row = await get("SELECT value FROM settings WHERE key = ?", [key]);
-  return row ? row.value : fallback;
-}
-
 async function initializeDatabase() {
   await exec(`
     PRAGMA journal_mode = WAL;
@@ -145,8 +127,6 @@ async function initializeDatabase() {
       total_payout INTEGER NOT NULL DEFAULT 0,
       net_result INTEGER NOT NULL,
       house_delta INTEGER NOT NULL,
-      jackpot_contribution INTEGER NOT NULL DEFAULT 0,
-      jackpot_win INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
@@ -246,8 +226,6 @@ async function initializeDatabase() {
       total_bet INTEGER NOT NULL DEFAULT 0,
       total_payout INTEGER NOT NULL DEFAULT 0,
       house_delta INTEGER NOT NULL DEFAULT 0,
-      jackpot_contribution INTEGER NOT NULL DEFAULT 0,
-      jackpot_win_total INTEGER NOT NULL DEFAULT 0,
       resolved_at TEXT
     );
 
@@ -365,10 +343,6 @@ async function initializeDatabase() {
       ON spins (round_id);
   `);
 
-  if ((await getSetting("jackpot_pool")) === null) {
-    await setSetting("jackpot_pool", config.initialJackpotPool);
-  }
-
   const adminHash = await hashPassword(config.adminPassword);
   const existingAdmin = await get("SELECT id FROM users WHERE username = ?", [
     config.adminUsername,
@@ -399,9 +373,7 @@ module.exports = {
   db,
   exec,
   get,
-  getSetting,
   initializeDatabase,
   run,
-  setSetting,
   withTransaction,
 };

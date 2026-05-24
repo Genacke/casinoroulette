@@ -1,7 +1,7 @@
 const express = require("express");
 const { serializeUser } = require("../server/auth");
 const { config } = require("../server/config");
-const { all, get, getSetting, run, withTransaction } = require("../server/db");
+const { all, get, run, withTransaction } = require("../server/db");
 const {
   asyncHandler,
   chatCooldown,

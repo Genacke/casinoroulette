@@ -601,15 +601,13 @@ async function resolveNextDueRound() {
             round_id,
             username_snapshot,
             result_number,
-          result_color,
-          total_bet,
-          total_payout,
-          net_result,
-          house_delta,
-            jackpot_contribution,
-            jackpot_win
+            result_color,
+            total_bet,
+            total_payout,
+            net_result,
+            house_delta
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           ticket.userId,
@@ -621,8 +619,6 @@ async function resolveNextDueRound() {
           totalPayout,
           netResult,
           ticket.totalBet - totalPayout,
-          0,
-          0,
         ],
       );
 
@@ -742,8 +738,6 @@ async function resolveNextDueRound() {
             total_bet = ?,
             total_payout = ?,
             house_delta = ?,
-            jackpot_contribution = ?,
-            jackpot_win_total = ?,
             resolved_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `,
@@ -754,8 +748,6 @@ async function resolveNextDueRound() {
         totalRoundBet,
         totalRoundPayout,
         totalRoundBet - totalRoundPayout,
-        0,
-        0,
         dueRound.id,
       ],
     );

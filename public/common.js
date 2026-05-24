@@ -107,11 +107,6 @@
         await playTone(880, 0.28, 0.05, "triangle");
       },
       lose: () => playTone(160, 0.3, 0.03, "sawtooth"),
-      jackpot: async () => {
-        await playTone(700, 0.15, 0.05, "triangle");
-        await playTone(900, 0.15, 0.05, "triangle");
-        await playTone(1200, 0.35, 0.06, "square");
-      },
     };
   }
 
