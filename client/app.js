@@ -57,6 +57,29 @@ const state = {
 
 const elements = {};
 
+function formatCompactKamas(amount) {
+  if (!Number.isFinite(amount)) {
+    return "0";
+  }
+
+  const sign = amount < 0 ? "-" : "";
+  const absolute = Math.abs(amount);
+
+  if (absolute >= 1000000) {
+    const millions =
+      absolute >= 10000000 || absolute % 1000000 === 0
+        ? Math.round(absolute / 1000000).toString()
+        : (absolute / 1000000).toFixed(1).replace(/\.0$/, "").replace(".", ",");
+    return `${sign}${millions}M`;
+  }
+
+  if (absolute >= 1000) {
+    return `${sign}${Math.round(absolute / 1000)}k`;
+  }
+
+  return `${sign}${absolute}`;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   cacheElements();
   bindEvents();
@@ -1075,8 +1098,8 @@ function renderPokerSeats(poker) {
       if (seat.isEmpty) {
         return `
           <article class="poker-seat empty seat-${seat.seatNo}">
-            <div class="section-title">Siege ${seat.seatNo}</div>
-            <div class="bet-meta">Libre</div>
+            <strong class="poker-seat-label">Siege ${seat.seatNo}</strong>
+            <span class="bet-meta">Libre</span>
           </article>
         `;
       }
@@ -1086,6 +1109,18 @@ function renderPokerSeats(poker) {
         : Array.from({ length: seat.cardsCount || 0 }, () =>
             renderPokerCard(null, { hidden: true }),
           ).join("");
+      const seatFlags = [
+        `S${seat.seatNo}`,
+        seat.isDealer ? "Dealer" : "",
+        seat.isSmallBlind ? "SB" : "",
+        seat.isBigBlind ? "BB" : "",
+      ]
+        .filter(Boolean)
+        .join(" | ");
+      const contributionLabel =
+        seat.handContribution > 0
+          ? `Engage ${formatCompactKamas(seat.handContribution)}`
+          : "En attente";
 
       return `
         <article class="poker-seat seat-${seat.seatNo} ${seat.isTurn ? "turn" : ""} ${seat.isMe ? "me" : ""}">
@@ -1093,14 +1128,11 @@ function renderPokerSeats(poker) {
             <strong>${escapeHtml(seat.username)}</strong>
             <span class="status-pill seat-status">${escapeHtml(formatPokerSeatState(seat.seatState))}</span>
           </div>
-          <div class="bet-meta">
-            Siege ${seat.seatNo}
-            ${seat.isDealer ? " | Dealer" : ""}
-            ${seat.isSmallBlind ? " | SB" : ""}
-            ${seat.isBigBlind ? " | BB" : ""}
+          <div class="poker-seat-meta">
+            <span>${escapeHtml(seatFlags)}</span>
+            <span>Stack ${formatCompactKamas(seat.stack)}</span>
           </div>
-          <div class="bet-meta">Stack ${formatKamas(seat.stack)}</div>
-          <div class="bet-meta">Engage ${formatKamas(seat.handContribution)}</div>
+          <div class="bet-meta">${escapeHtml(contributionLabel)}</div>
           <div class="poker-seat-cards">${cardsMarkup || '<div class="bet-meta">Cartes cachees</div>'}</div>
         </article>
       `;

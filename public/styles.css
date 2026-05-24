@@ -430,7 +430,7 @@ textarea:focus {
   grid-template-areas:
     "lobby arena"
     "log arena";
-  grid-template-columns: minmax(290px, 330px) minmax(0, 1fr);
+  grid-template-columns: minmax(270px, 310px) minmax(0, 1fr);
 }
 
 .roulette-grid .wheel-panel {
@@ -533,15 +533,15 @@ textarea:focus {
 .poker-stage-layout {
   margin-top: 16px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) 296px;
+  gap: 18px;
   align-items: start;
 }
 
 .poker-felt {
   position: relative;
   min-height: 560px;
-  padding: 28px;
+  padding: 24px;
   border-radius: 40px;
   border: 1px solid rgba(216, 181, 102, 0.16);
   background:
@@ -555,7 +555,7 @@ textarea:focus {
 .poker-felt::before {
   content: "";
   position: absolute;
-  inset: 22px;
+  inset: 18px;
   border-radius: 32px;
   border: 1px solid rgba(228, 203, 130, 0.12);
   pointer-events: none;
@@ -564,24 +564,24 @@ textarea:focus {
 .poker-board {
   position: absolute;
   left: 50%;
-  top: 40%;
+  top: 37%;
   transform: translate(-50%, -50%);
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
 }
 
 .poker-board-group {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .poker-card {
-  width: 66px;
-  min-height: 94px;
+  width: 60px;
+  min-height: 88px;
   display: grid;
   place-items: center;
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid rgba(216, 181, 102, 0.14);
   background:
     linear-gradient(180deg, rgba(255, 248, 226, 0.22), rgba(255, 255, 255, 0.06)),
@@ -591,7 +591,7 @@ textarea:focus {
 
 .poker-card span {
   font-family: var(--display-font);
-  font-size: 1.2rem;
+  font-size: 1.08rem;
   color: #1c1711;
 }
 
@@ -620,13 +620,13 @@ textarea:focus {
 .poker-center-pot {
   position: absolute;
   left: 50%;
-  top: 52%;
+  top: 49%;
   transform: translateX(-50%);
   display: grid;
   justify-items: center;
   gap: 4px;
-  min-width: 180px;
-  padding: 12px 16px;
+  min-width: 156px;
+  padding: 10px 14px;
   border-radius: 18px;
   border: 1px solid rgba(255, 214, 144, 0.16);
   background: rgba(10, 8, 6, 0.38);
@@ -640,24 +640,31 @@ textarea:focus {
 
 .poker-seat-ring {
   position: relative;
-  min-height: 504px;
+  min-height: 500px;
 }
 
 .poker-seat {
   position: absolute;
-  width: min(240px, calc(50% - 42px));
-  padding: 14px;
-  border-radius: 18px;
+  display: grid;
+  gap: 4px;
+  width: 164px;
+  padding: 10px 12px;
+  border-radius: 16px;
   border: 1px solid rgba(216, 181, 102, 0.1);
-  background: rgba(11, 8, 8, 0.34);
+  background: rgba(9, 11, 8, 0.3);
   backdrop-filter: blur(8px);
 }
 
 .poker-seat.empty {
-  display: grid;
   place-items: start;
-  min-height: 128px;
-  opacity: 0.76;
+  width: auto;
+  min-width: 102px;
+  min-height: auto;
+  gap: 4px;
+  padding: 9px 11px;
+  opacity: 0.82;
+  border-style: dashed;
+  background: rgba(8, 12, 9, 0.24);
 }
 
 .poker-seat.turn {
@@ -668,57 +675,83 @@ textarea:focus {
   border-color: rgba(161, 205, 125, 0.26);
 }
 
+.poker-seat.seat-1,
+.poker-seat.seat-4 {
+  width: 144px;
+}
+
 .poker-seat.seat-1 {
-  top: 18px;
+  top: 10px;
   left: 50%;
   transform: translateX(-50%);
 }
 
 .poker-seat.seat-2 {
-  top: 82px;
-  right: 18px;
+  top: 34px;
+  right: 12px;
 }
 
 .poker-seat.seat-3 {
-  right: 36px;
+  right: 12px;
   bottom: 92px;
 }
 
 .poker-seat.seat-4 {
   left: 50%;
-  bottom: 20px;
+  bottom: 76px;
   transform: translateX(-50%);
 }
 
 .poker-seat.seat-5 {
-  left: 36px;
+  left: 12px;
   bottom: 92px;
 }
 
 .poker-seat.seat-6 {
-  top: 82px;
-  left: 18px;
+  top: 34px;
+  left: 12px;
 }
 
 .poker-seat-head {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
+}
+
+.poker-seat-head strong,
+.poker-seat-label {
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.poker-seat-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.poker-seat .bet-meta {
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .poker-seat-cards,
 .poker-hero-cards {
-  margin-top: 12px;
+  margin-top: 4px;
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .poker-seat-cards .poker-card {
-  width: 44px;
-  min-height: 62px;
-  border-radius: 14px;
+  width: 34px;
+  min-height: 48px;
+  border-radius: 10px;
 }
 
 .poker-hero-cards {
@@ -734,8 +767,8 @@ textarea:focus {
 .poker-hero-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 15px;
   border-radius: 24px;
   border: 1px solid rgba(216, 181, 102, 0.1);
   background: rgba(10, 8, 7, 0.28);
@@ -767,10 +800,10 @@ textarea:focus {
 .poker-winner-summary {
   position: absolute;
   left: 50%;
-  bottom: 30px;
+  bottom: 18px;
   transform: translateX(-50%);
-  width: min(540px, calc(100% - 72px));
-  padding: 12px 16px;
+  width: min(380px, calc(100% - 140px));
+  padding: 10px 14px;
   border-radius: 16px;
   text-align: center;
   color: var(--text);
@@ -780,8 +813,8 @@ textarea:focus {
 }
 
 .seat-status {
-  font-size: 0.76rem;
-  padding: 7px 10px;
+  font-size: 0.7rem;
+  padding: 6px 8px;
 }
 
 .app-grid > .metrics-panel {
@@ -1525,7 +1558,7 @@ tr:last-child td {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
     min-height: auto;
-    margin-top: 220px;
+    margin-top: 204px;
   }
 
   .poker-seat {
@@ -1535,12 +1568,12 @@ tr:last-child td {
   }
 
   .poker-board {
-    top: 92px;
+    top: 82px;
     gap: 8px;
   }
 
   .poker-center-pot {
-    top: 184px;
+    top: 164px;
   }
 
   .poker-winner-summary {
@@ -1573,8 +1606,8 @@ tr:last-child td {
   }
 
   .poker-card {
-    width: 62px;
-    min-height: 90px;
+    width: 58px;
+    min-height: 84px;
   }
 }
 
