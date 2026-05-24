@@ -13,11 +13,11 @@ const RED_NUMBERS = new Set([
 
 const CHIP_VALUES = [200000, 500000, 1000000, 1500000, 2000000];
 const DEFAULT_PROBABILITIES = [
-  { type: "number", label: "Numero exact", probability: 2.7, totalReturnMultiplier: 36.26 },
-  { type: "color", label: "Rouge / Noir", probability: 48.65, totalReturnMultiplier: 2.01 },
-  { type: "parity", label: "Pair / Impair", probability: 48.65, totalReturnMultiplier: 2.01 },
-  { type: "range", label: "Manque / Passe", probability: 48.65, totalReturnMultiplier: 2.01 },
-  { type: "dozen", label: "Douzaine", probability: 32.43, totalReturnMultiplier: 3.02 },
+  { type: "number", label: "Numero exact", probability: 2.7, totalReturnMultiplier: 36 },
+  { type: "color", label: "Rouge / Noir", probability: 48.65, totalReturnMultiplier: 2 },
+  { type: "parity", label: "Pair / Impair", probability: 48.65, totalReturnMultiplier: 2 },
+  { type: "range", label: "Manque / Passe", probability: 48.65, totalReturnMultiplier: 2 },
+  { type: "dozen", label: "Douzaine", probability: 32.43, totalReturnMultiplier: 3 },
 ];
 const SKRIBBL_COLORS = [
   "#f6eed9",

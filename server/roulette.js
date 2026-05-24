@@ -13,22 +13,27 @@ const BET_CONFIG = {
   color: {
     label: "Couleur",
     probability: 18 / 37,
+    totalReturnMultiplier: 2,
   },
   number: {
     label: "Numero exact",
     probability: 1 / 37,
+    totalReturnMultiplier: 36,
   },
   parity: {
     label: "Pair / impair",
     probability: 18 / 37,
+    totalReturnMultiplier: 2,
   },
   range: {
     label: "Manque / passe",
     probability: 18 / 37,
+    totalReturnMultiplier: 2,
   },
   dozen: {
     label: "Douzaine",
     probability: 12 / 37,
+    totalReturnMultiplier: 3,
   },
 };
 
@@ -58,9 +63,7 @@ function totalReturnMultiplier(type, houseEdgePercent) {
     throw new Error("Unsupported bet type");
   }
 
-  const fairReturn = 1 / config.probability;
-  const houseFactor = 1 - houseEdgePercent / 100;
-  return Number((fairReturn * houseFactor).toFixed(4));
+  return config.totalReturnMultiplier;
 }
 
 function spinNumber() {
@@ -179,12 +182,7 @@ function evaluateBet(bet, resultNumber, houseEdgePercent) {
     (bet.type === "dozen" && pocket.number !== 0 && bet.value === pocket.dozen);
 
   const multiplier = totalReturnMultiplier(bet.type, houseEdgePercent);
-  const totalReturn = didWin
-    ? Math.max(
-        bet.amount + 1,
-        Math.floor(bet.amount * totalReturnMultiplier(bet.type, houseEdgePercent)),
-      )
-    : 0;
+  const totalReturn = didWin ? bet.amount * multiplier : 0;
 
   return {
     didWin,
