@@ -4,6 +4,7 @@ const { all, get, run, withTransaction } = require("./db");
 
 const BOARD_ROWS = 6;
 const BOARD_COLUMNS = 7;
+const TURN_TIMEOUT_GRACE_MS = 1200;
 const TABLE_PRESET = {
   slug: "puissance-4-blitz",
   name: "Puissance 4 Blitz",
@@ -460,6 +461,7 @@ async function buildConnect4State(userId) {
     get("SELECT * FROM users WHERE id = ?", [userId]),
     loadRecentActions(table.id),
   ]);
+  const lastAction = recentActions[recentActions.length - 1] || null;
   const myColor = colorForUser(table, userId);
   const seatCount = [table.redUserId, table.yellowUserId].filter(Boolean).length;
   const activeSeat = table.activeColor ? seatForColor(table, table.activeColor) : null;
@@ -491,6 +493,8 @@ async function buildConnect4State(userId) {
     seatCount,
     secondsToAct: table.status === "playing" ? secondsUntil(table.actionDeadline) : 0,
     secondsToNextGame: table.status === "showdown" ? secondsUntil(table.nextGameAt) : 0,
+    updatedAt: table.updatedAt,
+    lastActionId: lastAction ? Number(lastAction.id) : 0,
     activeColor: table.activeColor,
     activeUsername: activeSeat?.username || null,
     winnerColor: table.winnerColor,
@@ -964,15 +968,25 @@ async function tickConnect4Engine() {
 
   try {
     const table = await getConnect4Table();
+    const actionDeadlineAt = fromSqlTimestamp(table.actionDeadline);
+    const nextGameAt = fromSqlTimestamp(table.nextGameAt);
 
-    if (table.status === "playing" && secondsUntil(table.actionDeadline) <= 0) {
+    if (
+      table.status === "playing"
+      && actionDeadlineAt
+      && Date.now() >= actionDeadlineAt + TURN_TIMEOUT_GRACE_MS
+    ) {
       const winnerColor = table.activeColor ? otherColor(table.activeColor) : null;
       if (winnerColor) {
         await resolveWin(table, winnerColor, "timeout");
       } else {
         await resetConnect4Table(table.id);
       }
-    } else if (table.status === "showdown" && secondsUntil(table.nextGameAt) <= 0) {
+    } else if (
+      table.status === "showdown"
+      && nextGameAt
+      && Date.now() >= nextGameAt + TURN_TIMEOUT_GRACE_MS
+    ) {
       await resetConnect4Table(table.id);
     }
   } finally {

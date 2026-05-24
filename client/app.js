@@ -29,6 +29,7 @@ const SKRIBBL_COLORS = [
   "#9a72dd",
   "#f08d8d",
 ];
+const TEMPORARILY_DISABLED_VIEWS = new Set(["connect4", "skribbl"]);
 
 const state = {
   me: null,
@@ -117,6 +118,7 @@ function formatCompactKamas(amount) {
 document.addEventListener("DOMContentLoaded", () => {
   cacheElements();
   bindEvents();
+  syncTemporarilyHiddenViews();
   buildChipRow();
   buildNumberGrid();
   renderProbabilityCards(DEFAULT_PROBABILITIES);
@@ -167,6 +169,7 @@ function cacheElements() {
     historyList: document.getElementById("historyList"),
     lastNumbers: document.getElementById("lastNumbers"),
     leaderboardList: document.getElementById("leaderboardList"),
+    lastResultValue: document.getElementById("lastResultValue"),
     loginForm: document.getElementById("loginForm"),
     logoutButton: document.getElementById("logoutButton"),
     metricMaxLabel: document.getElementById("metricMaxLabel"),
@@ -350,6 +353,15 @@ function bindEvents() {
   });
 }
 
+function syncTemporarilyHiddenViews() {
+  elements.viewConnect4Button.classList.toggle("hidden", !isViewEnabled("connect4"));
+  elements.viewSkribblButton.classList.toggle("hidden", !isViewEnabled("skribbl"));
+}
+
+function isViewEnabled(view) {
+  return !TEMPORARILY_DISABLED_VIEWS.has(view);
+}
+
 async function hydrateSession() {
   try {
     const payload = await api("/api/auth/me");
@@ -377,7 +389,7 @@ function applyBootstrap(payload, options = {}) {
   state.me = payload.user;
   state.pendingTicket = payload.pendingTicket || emptyPendingTicket(payload.currentRound?.id);
   state.cashoutRequests = payload.cashoutRequests || [];
-  state.connect4 = payload.connect4 || null;
+  state.connect4 = mergeConnect4State(payload.connect4 || null, state.connect4);
   syncConnect4StartSoundState(state.connect4, { play: false });
   state.skribbl = payload.skribbl || null;
   state.poker = payload.poker || null;
@@ -406,6 +418,7 @@ function applyBootstrap(payload, options = {}) {
   renderMetrics();
   renderBetRulesSummary();
   renderRoundPanel();
+  renderLatestResolvedNumber();
   renderLastNumbers(payload.lastNumbers);
   renderHistory(payload.history);
   renderLeaderboard(payload.leaderboard);
@@ -1008,7 +1021,7 @@ function renderLastNumbers(numbers) {
   }
 
   elements.lastNumbers.innerHTML = numbers
-    .slice(0, 8)
+    .slice(0, 12)
     .map(
       (entry) => `
         <span class="number-pill ${entry.resultColor}">
@@ -1168,8 +1181,85 @@ function describeProbability(type) {
   return type;
 }
 
+function renderLatestResolvedNumber(round = state.bootstrap?.latestResolvedRound) {
+  if (!elements.lastResultValue) {
+    return;
+  }
+
+  elements.lastResultValue.textContent = round
+    ? `${round.resultNumber} ${formatRoundColor(round.resultColor)}`
+    : "--";
+}
+
+function renderRealtimeGameViews() {
+  if (state.activeView === "connect4") {
+    renderConnect4();
+  }
+
+  if (state.activeView === "skribbl") {
+    renderSkribbl();
+  }
+
+  if (state.activeView === "poker") {
+    renderPoker();
+  }
+}
+
 function getConnect4State() {
   return state.connect4 || state.bootstrap?.connect4 || null;
+}
+
+function getConnect4LastActionId(connect4) {
+  if (!connect4) {
+    return 0;
+  }
+
+  if (Number.isFinite(Number(connect4.lastActionId))) {
+    return Number(connect4.lastActionId);
+  }
+
+  const recentActions = connect4.recentActions || [];
+  const lastAction = recentActions[recentActions.length - 1];
+  return Number(lastAction?.id || 0);
+}
+
+function parseSqlTimestamp(value) {
+  if (!value) {
+    return 0;
+  }
+
+  const parsed = Date.parse(String(value).replace(" ", "T") + "Z");
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function mergeConnect4State(nextConnect4, currentConnect4 = state.connect4) {
+  if (!nextConnect4) {
+    return currentConnect4 || null;
+  }
+
+  if (!currentConnect4) {
+    return nextConnect4;
+  }
+
+  const nextActionId = getConnect4LastActionId(nextConnect4);
+  const currentActionId = getConnect4LastActionId(currentConnect4);
+
+  if (nextActionId < currentActionId) {
+    return currentConnect4;
+  }
+
+  if (nextActionId > currentActionId) {
+    return nextConnect4;
+  }
+
+  const nextUpdatedAt = parseSqlTimestamp(nextConnect4.updatedAt);
+  const currentUpdatedAt = parseSqlTimestamp(currentConnect4.updatedAt);
+
+  if (nextUpdatedAt < currentUpdatedAt) {
+    return currentConnect4;
+  }
+
+  return nextConnect4;
 }
 
 function getLatestConnect4StartActionId(connect4) {
@@ -2578,14 +2668,15 @@ async function rotateSlotSeedPair() {
 }
 
 function setActiveView(view) {
+  const requestedView = isViewEnabled(view) ? view : "roulette";
   state.activeView =
-    view === "poker"
+    requestedView === "poker"
       ? "poker"
-      : view === "connect4"
+      : requestedView === "connect4"
         ? "connect4"
-        : view === "skribbl"
+        : requestedView === "skribbl"
           ? "skribbl"
-        : view === "slots"
+          : requestedView === "slots"
           ? "slots"
           : "roulette";
   elements.viewRouletteButton.classList.toggle("active", state.activeView === "roulette");
@@ -2642,7 +2733,7 @@ async function joinConnect4Table() {
     });
 
     state.me = payload.user;
-    state.connect4 = payload.connect4;
+    state.connect4 = mergeConnect4State(payload.connect4);
     syncConnect4StartSoundState(state.connect4);
     state.bootstrap = {
       ...state.bootstrap,
@@ -2674,7 +2765,7 @@ async function leaveConnect4Table() {
     });
 
     state.me = payload.user;
-    state.connect4 = payload.connect4;
+    state.connect4 = mergeConnect4State(payload.connect4);
     syncConnect4StartSoundState(state.connect4);
     state.bootstrap = {
       ...state.bootstrap,
@@ -2716,7 +2807,7 @@ async function submitConnect4Move(column) {
     });
 
     state.me = payload.user;
-    state.connect4 = payload.connect4;
+    state.connect4 = mergeConnect4State(payload.connect4);
     syncConnect4StartSoundState(state.connect4);
     state.bootstrap = {
       ...state.bootstrap,
@@ -3614,27 +3705,27 @@ function tickRoundCountdown() {
   }
 
   renderRoundPanel();
-  if (state.connect4?.status === "playing" && state.connect4.secondsToAct > 0) {
-    state.connect4.secondsToAct -= 1;
+  if (state.activeView === "connect4") {
+    renderConnect4();
   }
-  if (state.connect4?.status === "showdown" && state.connect4.secondsToNextGame > 0) {
-    state.connect4.secondsToNextGame -= 1;
-  }
-  renderConnect4();
   if (state.skribbl?.status === "playing" && state.skribbl.secondsToEnd > 0) {
     state.skribbl.secondsToEnd -= 1;
   }
   if (state.skribbl?.status === "showdown" && state.skribbl.secondsToNextRound > 0) {
     state.skribbl.secondsToNextRound -= 1;
   }
-  renderSkribbl();
+  if (state.activeView === "skribbl") {
+    renderSkribbl();
+  }
   if (state.poker?.status === "playing" && state.poker.secondsToAct > 0) {
     state.poker.secondsToAct -= 1;
   }
   if (state.poker?.status === "showdown" && state.poker.secondsToNextHand > 0) {
     state.poker.secondsToNextHand -= 1;
   }
-  renderPoker();
+  if (state.activeView === "poker") {
+    renderPoker();
+  }
   updateSpinButtons();
 }
 
@@ -3656,10 +3747,17 @@ async function pollRoundState() {
 }
 
 async function handleRoundState(payload) {
+  const previousLastNumbers = state.bootstrap?.lastNumbers || [];
+  const previousLatestResolvedRound = state.bootstrap?.latestResolvedRound || null;
+  const resolvedRoundNeedsAnimation =
+    Boolean(payload.latestResolvedRound)
+    && payload.latestResolvedRound.id > (state.lastAnimatedRoundId || 0);
+  const shouldDeferResolvedReveal = state.isAnimatingRound || resolvedRoundNeedsAnimation;
+
   state.me = payload.user;
   state.pendingTicket = payload.pendingTicket || emptyPendingTicket(payload.currentRound?.id);
   state.cashoutRequests = payload.cashoutRequests || state.cashoutRequests;
-  state.connect4 = payload.connect4 || state.connect4;
+  state.connect4 = mergeConnect4State(payload.connect4 || null, state.connect4);
   syncConnect4StartSoundState(state.connect4);
   state.skribbl = payload.skribbl || state.skribbl;
   state.poker = payload.poker || state.poker;
@@ -3673,9 +3771,11 @@ async function handleRoundState(payload) {
     ...state.bootstrap,
     currentRound: payload.currentRound,
     pendingTicket: state.pendingTicket,
-    latestResolvedRound: payload.latestResolvedRound,
+    latestResolvedRound: shouldDeferResolvedReveal
+      ? previousLatestResolvedRound
+      : payload.latestResolvedRound,
     latestPlayerSpin: payload.latestPlayerSpin,
-    lastNumbers: payload.lastNumbers,
+    lastNumbers: shouldDeferResolvedReveal ? previousLastNumbers : payload.lastNumbers,
     serverTime: payload.serverTime,
     cashoutRequests: state.cashoutRequests,
     connect4: state.connect4,
@@ -3685,25 +3785,25 @@ async function handleRoundState(payload) {
 
   renderMetrics();
   renderRoundPanel();
-  renderLastNumbers(payload.lastNumbers);
+  renderLatestResolvedNumber();
+  renderLastNumbers(state.bootstrap.lastNumbers);
   renderCashoutSection();
-  renderConnect4();
-  renderSkribbl();
-  renderPoker();
+  renderRealtimeGameViews();
   updateSpinButtons();
 
-  if (
-    payload.latestResolvedRound &&
-    payload.latestResolvedRound.id > (state.lastAnimatedRoundId || 0)
-  ) {
-    await onRoundResolved(payload.latestResolvedRound, payload.latestPlayerSpin);
+  if (resolvedRoundNeedsAnimation) {
+    await onRoundResolved(
+      payload.latestResolvedRound,
+      payload.latestPlayerSpin,
+      payload.lastNumbers,
+    );
     return;
   }
 
   await maybeSubmitAutoTicket();
 }
 
-async function onRoundResolved(round, playerSpin) {
+async function onRoundResolved(round, playerSpin, lastNumbers = null) {
   if (state.isAnimatingRound) {
     return;
   }
@@ -3718,6 +3818,14 @@ async function onRoundResolved(round, playerSpin) {
     }
 
     await animateWheel(round.winningPocketIndex);
+
+    state.bootstrap = {
+      ...state.bootstrap,
+      latestResolvedRound: round,
+      lastNumbers: lastNumbers || state.bootstrap?.lastNumbers || [],
+    };
+    renderLatestResolvedNumber(round);
+    renderLastNumbers(state.bootstrap.lastNumbers);
 
     if (playerSpin) {
       openResultModal(round, playerSpin);
