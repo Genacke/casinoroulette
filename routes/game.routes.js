@@ -206,7 +206,7 @@ async function getCashoutRequests(userId, limit = 8) {
   return rows.map(mapCashoutRequest);
 }
 
-async function getPlayerBootstrap(userId) {
+async function getPlayerBootstrap(userId, pokerTableSlug = null) {
   const [roundState, stats, history, leaderboard, chat, notifications, cashoutRequests, poker] =
     await Promise.all([
       buildRoundState(userId),
@@ -216,7 +216,7 @@ async function getPlayerBootstrap(userId) {
       getChatMessages(),
       getNotifications(userId),
       getCashoutRequests(userId),
-      buildPokerState(userId),
+      buildPokerState(userId, pokerTableSlug),
     ]);
 
   return {
@@ -257,7 +257,7 @@ router.get(
   "/bootstrap",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const payload = await getPlayerBootstrap(req.user.id);
+    const payload = await getPlayerBootstrap(req.user.id, req.query?.table || null);
 
     res.json({
       success: true,
@@ -270,10 +270,11 @@ router.get(
   "/round-state",
   requireAuth,
   asyncHandler(async (req, res) => {
+    const pokerTableSlug = req.query?.table || null;
     const [roundState, cashoutRequests, poker] = await Promise.all([
       buildRoundState(req.user.id),
       getCashoutRequests(req.user.id),
-      buildPokerState(req.user.id),
+      buildPokerState(req.user.id, pokerTableSlug),
     ]);
 
     res.json({

@@ -232,23 +232,30 @@
             </section>
 
             <section id="pokerView" class="poker-grid game-view hidden">
-              <section class="panel poker-table-panel">
+              <section class="panel poker-lobby-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow">Salon poker</p>
+                    <h3>Choisis une table</h3>
+                  </div>
+                </div>
+                <div id="pokerTableList" class="poker-table-list"></div>
+              </section>
+
+              <section class="panel poker-arena-panel">
                 <div class="panel-header">
                   <div>
                     <p class="eyebrow">Table Texas Hold'em</p>
-                    <h3 id="pokerTableTitle">Table des 10M</h3>
+                    <h3 id="pokerTableTitle">Table d'Amakna</h3>
                   </div>
-                  <div class="poker-action-cluster">
-                    <button id="joinPokerButton" class="secondary-button" type="button">
-                      Rejoindre
-                    </button>
-                    <button id="leavePokerButton" class="ghost-button" type="button">
-                      Quitter
-                    </button>
-                  </div>
+                  <div class="status-pill" id="pokerPlayersNeeded">2 joueurs pour lancer</div>
                 </div>
-                <div id="pokerJoinState" class="bet-meta poker-join-state">
-                  Rejoins la table pour la prochaine main.
+
+                <div class="poker-table-copy">
+                  <div class="section-title" id="pokerTableVibe">Table centrale</div>
+                  <div class="bet-meta" id="pokerTableDescription">
+                    Rejoins la table pour le prochain coup d'envoi.
+                  </div>
                 </div>
 
                 <div class="poker-summary-grid">
@@ -269,43 +276,42 @@
                     <strong id="pokerPhaseValue">--</strong>
                   </div>
                   <div class="ticket-info">
-                    <span>Pot</span>
-                    <strong id="pokerPotValue">0 kamas</strong>
-                  </div>
-                  <div class="ticket-info">
-                    <span>Tour / compte</span>
+                    <span>Tour</span>
                     <strong id="pokerTurnValue">--</strong>
                   </div>
                 </div>
 
-                <div class="poker-board-panel">
-                  <div class="section-title">Board</div>
+                <div class="poker-felt">
                   <div id="pokerBoard" class="poker-board"></div>
+                  <div class="poker-center-pot">
+                    <span>Pot central</span>
+                    <strong id="pokerPotValue">0 kamas</strong>
+                  </div>
                   <div id="pokerWinnerSummary" class="poker-winner-summary">
                     En attente du prochain duel.
                   </div>
+                  <div id="pokerSeatGrid" class="poker-seat-ring"></div>
                 </div>
               </section>
 
-              <section class="panel poker-seats-panel">
+              <section class="panel poker-controls-panel">
                 <div class="panel-header">
                   <div>
-                    <p class="eyebrow">Sieges</p>
-                    <h3>Joueurs autour de la table</h3>
-                  </div>
-                  <div class="status-pill" id="pokerPlayersNeeded">2 joueurs pour lancer</div>
-                </div>
-                <div id="pokerSeatGrid" class="poker-seat-grid"></div>
-              </section>
-
-              <section class="panel poker-actions-panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow">Ta main</p>
+                    <p class="eyebrow">Ta place</p>
                     <h3 id="pokerMeStatus">Pas assis a la table</h3>
                   </div>
+                  <div class="poker-action-cluster">
+                    <button id="joinPokerButton" class="secondary-button" type="button">
+                      Rejoindre
+                    </button>
+                    <button id="leavePokerButton" class="ghost-button" type="button">
+                      Quitter
+                    </button>
+                  </div>
                 </div>
-
+                <div id="pokerJoinState" class="bet-meta poker-join-state">
+                  Rejoins la table pour la prochaine main.
+                </div>
                 <div id="pokerHeroCards" class="poker-hero-cards"></div>
 
                 <div class="poker-action-bar">
@@ -325,15 +331,7 @@
                 <div id="pokerActionHint" class="bet-meta">
                   Rejoins la table pour recevoir deux cartes et jouer des mains Hold'em.
                 </div>
-              </section>
 
-              <section class="panel poker-rules-panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow">Regles</p>
-                    <h3>Table rapide</h3>
-                  </div>
-                </div>
                 <div class="poker-rules-list">
                   <div class="feature-chip">Texas Hold'em no limit</div>
                   <div class="feature-chip">La main part a 2 joueurs</div>

@@ -2,8 +2,30 @@ const crypto = require("crypto");
 const { config } = require("./config");
 const { all, get, run, withTransaction } = require("./db");
 
-const TABLE_SLUG = "grande-table-10m";
-const TABLE_NAME = "Table des 10M";
+const TABLE_PRESETS = [
+  {
+    slug: "grande-table-10m",
+    name: "Table d'Amakna",
+    vibe: "Table centrale",
+    description: "La table la plus accessible pour lancer des mains sans attendre.",
+    accent: "gold",
+  },
+  {
+    slug: "table-bonta-10m",
+    name: "Table de Bonta",
+    vibe: "Salon clair",
+    description: "Une ambiance plus propre, ideale pour les joueurs serres et methodiques.",
+    accent: "ivory",
+  },
+  {
+    slug: "table-brakmar-10m",
+    name: "Table de Brakmar",
+    vibe: "Tapis sombre",
+    description: "Une table plus nerveuse, pensee pour ceux qui aiment faire gonfler les pots.",
+    accent: "crimson",
+  },
+];
+const DEFAULT_TABLE_SLUG = TABLE_PRESETS[0].slug;
 const HAND_LABELS = [
   "Carte haute",
   "Une paire",
@@ -98,6 +120,10 @@ function mapSeatRow(row) {
     joinedAt: row.joined_at,
     updatedAt: row.updated_at,
   };
+}
+
+function getTablePreset(slug) {
+  return TABLE_PRESETS.find((entry) => entry.slug === slug) || TABLE_PRESETS[0];
 }
 
 function createDeck() {
@@ -390,7 +416,7 @@ function isBettingRoundComplete(table, seats) {
   );
 }
 
-async function ensurePokerTable() {
+async function ensurePokerTable(preset) {
   await run(
     `
       INSERT INTO poker_tables (
@@ -419,8 +445,8 @@ async function ensurePokerTable() {
         updated_at = CURRENT_TIMESTAMP
     `,
     [
-      TABLE_SLUG,
-      TABLE_NAME,
+      preset.slug,
+      preset.name,
       config.pokerTableBuyIn,
       config.pokerSmallBlind,
       config.pokerBigBlind,
@@ -430,20 +456,48 @@ async function ensurePokerTable() {
     ],
   );
 
-  return getPokerTableRow();
+  return getPokerTableRow(preset.slug);
 }
 
-async function getPokerTableRow() {
+async function ensurePokerTables() {
+  const tables = [];
+  for (const preset of TABLE_PRESETS) {
+    tables.push(await ensurePokerTable(preset));
+  }
+  return tables;
+}
+
+async function getPokerTableRow(identifier = DEFAULT_TABLE_SLUG) {
+  const resolvedIdentifier =
+    identifier === null || identifier === undefined || identifier === ""
+      ? DEFAULT_TABLE_SLUG
+      : identifier;
+  const whereClause = Number.isInteger(resolvedIdentifier) ? "id = ?" : "slug = ?";
   return mapTableRow(
     await get(
       `
         SELECT *
         FROM poker_tables
-        WHERE slug = ?
+        WHERE ${whereClause}
       `,
-      [TABLE_SLUG],
+      [resolvedIdentifier],
     ),
   );
+}
+
+async function getPokerTableRows() {
+  const placeholders = TABLE_PRESETS.map(() => "?").join(", ");
+  const rows = await all(
+    `
+      SELECT *
+      FROM poker_tables
+      WHERE slug IN (${placeholders})
+      ORDER BY id ASC
+    `,
+    TABLE_PRESETS.map((entry) => entry.slug),
+  );
+
+  return rows.map(mapTableRow);
 }
 
 async function getPokerSeats(tableId) {
@@ -487,8 +541,25 @@ async function getPokerLog(tableId, limit = 18) {
   );
 }
 
-async function loadTableBundle() {
-  const table = await ensurePokerTable();
+async function loadTableBundle(identifier = DEFAULT_TABLE_SLUG) {
+  const resolvedIdentifier =
+    identifier === null || identifier === undefined || identifier === ""
+      ? DEFAULT_TABLE_SLUG
+      : identifier;
+  const table =
+    resolvedIdentifier &&
+    typeof resolvedIdentifier === "object" &&
+    Number.isInteger(resolvedIdentifier.id)
+      ? resolvedIdentifier
+      : await getPokerTableRow(resolvedIdentifier);
+
+  if (!table) {
+    return {
+      table: null,
+      seats: [],
+    };
+  }
+
   return {
     table,
     seats: await getPokerSeats(table.id),
@@ -574,7 +645,7 @@ async function updateWaitingTable(table, summary = "En attente de joueurs.") {
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `,
-    [config.pokerBigBlind, summary, table.id],
+    [table.bigBlind, summary, table.id],
   );
 
   await run(
@@ -666,7 +737,7 @@ async function startNewHand(table, seats) {
         ? `Encore ${table.minPlayers - eligibleSeats.length} joueur(s) pour lancer une main.`
         : "La table attend des aventuriers.",
     );
-    return loadTableBundle();
+    return loadTableBundle(table.id);
   }
 
   const orderedSeatNumbers = eligibleSeats.map((seat) => seat.seatNo);
@@ -756,7 +827,7 @@ async function startNewHand(table, seats) {
     await logPokerAction(updatedTable, bigBlindSeat.username, "big_blind", bigBlindPosted, "", bigBlindSeat.userId);
   }
 
-  return loadTableBundle();
+  return loadTableBundle(table.id);
 }
 
 function currentBoard(table) {
@@ -820,7 +891,7 @@ async function settleSingleWinner(table, seats, winner, reason) {
     [winner.userId, summary],
   );
 
-  return loadTableBundle();
+  return loadTableBundle(table.id);
 }
 
 function buildSidePots(seats) {
@@ -856,7 +927,7 @@ async function settleShowdown(table, seats) {
 
   if (!contenders.length) {
     await updateWaitingTable(table, "Main annulee.");
-    return loadTableBundle();
+    return loadTableBundle(table.id);
   }
 
   const fullBoard = table.boardCards.slice(0, 5);
@@ -979,7 +1050,7 @@ async function settleShowdown(table, seats) {
     winnerSummary,
   );
 
-  return loadTableBundle();
+  return loadTableBundle(table.id);
 }
 
 async function advanceStreetOrShowdown(table, seats) {
@@ -1062,7 +1133,7 @@ async function advanceStreetOrShowdown(table, seats) {
     nextPhase,
   );
 
-  return loadTableBundle();
+  return loadTableBundle(table.id);
 }
 
 async function continueHand(table, seats, actingSeatNo) {
@@ -1098,7 +1169,7 @@ async function continueHand(table, seats, actingSeatNo) {
     ],
   );
 
-  return loadTableBundle();
+  return loadTableBundle(table.id);
 }
 
 async function applyLoadedPlayerAction(table, seats, seat, requestedAction, rawAmount, options = {}) {
@@ -1212,9 +1283,14 @@ async function applyLoadedPlayerAction(table, seats, seat, requestedAction, rawA
   return continueHand(table, seats, seat.seatNo);
 }
 
-async function processPlayerAction(userId, requestedAction, rawAmount, options = {}) {
+async function processPlayerAction(userId, tableSlug, requestedAction, rawAmount, options = {}) {
   return withTransaction(async () => {
-    const { table, seats } = await loadTableBundle();
+    const { table, seats } = await loadTableBundle(tableSlug);
+
+    if (!table) {
+      throw new Error("Table poker introuvable.");
+    }
+
     const seat = seats.find((entry) => entry.userId === userId);
 
     if (!seat) {
@@ -1233,11 +1309,11 @@ async function processPlayerAction(userId, requestedAction, rawAmount, options =
   });
 }
 
-async function handleTimedOutTurn() {
+async function handleTimedOutTurn(tableReference) {
   return withTransaction(async () => {
-    const { table, seats } = await loadTableBundle();
+    const { table, seats } = await loadTableBundle(tableReference);
 
-    if (table.status !== "playing" || !table.activeSeat) {
+    if (!table || table.status !== "playing" || !table.activeSeat) {
       return null;
     }
 
@@ -1262,16 +1338,18 @@ async function handleTimedOutTurn() {
   });
 }
 
-async function maybeAdvanceWaitingTable() {
+async function maybeAdvanceWaitingTable(tableReference) {
   return withTransaction(async () => {
-    const table = await ensurePokerTable();
+    const table = await getPokerTableRow(
+      tableReference && typeof tableReference === "object" ? tableReference.id : tableReference,
+    );
 
-    if (table.status === "playing") {
+    if (!table || table.status === "playing") {
       return null;
     }
 
     await cleanupBustedSeats(table.id);
-    const freshTable = await getPokerTableRow();
+    const freshTable = await getPokerTableRow(table.id);
     const seats = await getPokerSeats(freshTable.id);
 
     if (freshTable.status === "showdown") {
@@ -1285,13 +1363,19 @@ async function maybeAdvanceWaitingTable() {
   });
 }
 
-async function syncPokerTable() {
-  const table = await ensurePokerTable();
+async function syncPokerTable(tableReference) {
+  const table = await getPokerTableRow(
+    tableReference && typeof tableReference === "object" ? tableReference.id : tableReference,
+  );
+
+  if (!table) {
+    return;
+  }
 
   if (table.status === "playing") {
     if (!table.activeSeat) {
       await withTransaction(async () => {
-        const bundle = await loadTableBundle();
+        const bundle = await loadTableBundle(table.id);
         await advanceStreetOrShowdown(bundle.table, bundle.seats);
       });
       return;
@@ -1299,12 +1383,19 @@ async function syncPokerTable() {
 
     const deadlineMs = fromSqlTimestamp(table.actionDeadline);
     if (deadlineMs && deadlineMs <= Date.now()) {
-      await handleTimedOutTurn();
+      await handleTimedOutTurn(table.id);
     }
     return;
   }
 
-  await maybeAdvanceWaitingTable();
+  await maybeAdvanceWaitingTable(table.id);
+}
+
+async function syncPokerTables() {
+  const tables = await ensurePokerTables();
+  for (const table of tables) {
+    await syncPokerTable(table.id);
+  }
 }
 
 function describePhase(phase) {
@@ -1358,33 +1449,12 @@ function cardLabel(card) {
   };
 }
 
-async function buildPokerState(userId) {
-  const [{ table, seats }, user, actionLog] = await Promise.all([
-    loadTableBundle(),
-    get("SELECT balance FROM users WHERE id = ?", [userId]),
-    ensurePokerTable().then((resolvedTable) => getPokerLog(resolvedTable.id)),
-  ]);
+function buildJoinLeaveState(table, seats, userId, playerBalance) {
   const meSeat = seats.find((seat) => seat.userId === userId) || null;
   const eligibleSeats = eligibleSeatNumbers(seats);
-  const blindSeats =
-    table.phase === "waiting" ? getBlindSeats([], 0) : getBlindSeats(eligibleSeats, table.dealerSeat);
-  const callAmount = meSeat ? Math.max(0, table.currentBet - meSeat.roundBet) : 0;
-  const maxRaiseTo = meSeat ? meSeat.roundBet + meSeat.stack : 0;
-  const minimumRaiseTo =
-    table.currentBet === 0
-      ? table.bigBlind
-      : table.currentBet + Math.max(table.minRaise || table.bigBlind, table.bigBlind);
-  const canAct =
-    Boolean(meSeat) &&
-    table.status === "playing" &&
-    meSeat.seatState === "active" &&
-    meSeat.seatNo === table.activeSeat;
-  const visibleBoard = currentBoard(table).map(cardLabel);
-  const showdownVisible = table.phase === "showdown";
   const seatsTaken = seats.filter((seat) => seat.stack > 0).length;
   const isTableFull = seatsTaken >= table.maxPlayers;
   const meParticipating = meSeat ? isSeatInCurrentHand(meSeat) : false;
-  const playerBalance = Number(user?.balance || 0);
   let canJoin = false;
   let joinLabel = "Rejoindre";
   let joinReason = "";
@@ -1417,9 +1487,131 @@ async function buildPokerState(userId) {
       : "Attends la fin de la main pour quitter.";
 
   return {
+    meSeat,
+    eligibleSeats,
+    seatsTaken,
+    meParticipating,
+    canJoin,
+    joinLabel,
+    joinReason,
+    canLeave,
+    leaveReason,
+  };
+}
+
+function buildLobbyEntry(table, seats, userId, playerBalance, selectedTableSlug) {
+  const preset = getTablePreset(table.slug);
+  const joinState = buildJoinLeaveState(table, seats, userId, playerBalance);
+  const playersSeated = joinState.eligibleSeats.length;
+  const playersNeeded = Math.max(0, table.minPlayers - playersSeated);
+
+  return {
+    slug: table.slug,
+    name: table.name,
+    vibe: preset.vibe,
+    description: preset.description,
+    accent: preset.accent,
+    buyIn: table.buyIn,
+    smallBlind: table.smallBlind,
+    bigBlind: table.bigBlind,
+    minPlayers: table.minPlayers,
+    maxPlayers: table.maxPlayers,
+    status: table.status,
+    phase: table.phase,
+    phaseLabel: describePhase(table.phase),
+    handNumber: table.handNumber,
+    pot: table.pot,
+    playersSeated,
+    playersNeeded,
+    isSelected: table.slug === selectedTableSlug,
+    isSeated: Boolean(joinState.meSeat),
+    mySeatState: joinState.meSeat?.seatState || null,
+    canJoin: joinState.canJoin,
+    joinLabel: joinState.joinLabel,
+    joinReason: joinState.joinReason,
+    occupancyLabel: `${playersSeated}/${table.maxPlayers}`,
+    statusLabel:
+      table.status === "playing"
+        ? `Main #${table.handNumber}`
+        : table.status === "showdown"
+          ? "Showdown"
+          : playersNeeded > 0
+            ? `${playersNeeded} joueur(s) manquant(s)`
+            : "Depart imminent",
+  };
+}
+
+function resolveSelectedTableSlug(bundles, requestedSlug, userId) {
+  if (requestedSlug && bundles.some((bundle) => bundle.table.slug === requestedSlug)) {
+    return requestedSlug;
+  }
+
+  const occupiedBundles = bundles.filter((bundle) =>
+    bundle.seats.some((seat) => seat.userId === userId && seat.stack > 0),
+  );
+
+  if (occupiedBundles.length) {
+    return (
+      occupiedBundles.find((bundle) => bundle.table.status === "playing")?.table.slug ||
+      occupiedBundles[0].table.slug
+    );
+  }
+
+  return (
+    bundles.find((bundle) => bundle.table.slug === DEFAULT_TABLE_SLUG)?.table.slug ||
+    bundles[0]?.table.slug ||
+    DEFAULT_TABLE_SLUG
+  );
+}
+
+async function buildPokerState(userId, requestedTableSlug = null) {
+  await ensurePokerTables();
+  const [bundles, user] = await Promise.all([
+    getPokerTableRows().then((rows) => Promise.all(rows.map((row) => loadTableBundle(row)))),
+    get("SELECT balance FROM users WHERE id = ?", [userId]),
+  ]);
+
+  const selectedTableSlug = resolveSelectedTableSlug(bundles, requestedTableSlug, userId);
+  const selectedBundle = bundles.find((bundle) => bundle.table.slug === selectedTableSlug) || bundles[0];
+
+  if (!selectedBundle?.table) {
+    return null;
+  }
+
+  const { table, seats } = selectedBundle;
+  const actionLog = await getPokerLog(table.id);
+  const playerBalance = Number(user?.balance || 0);
+  const joinState = buildJoinLeaveState(table, seats, userId, playerBalance);
+  const blindSeats =
+    table.phase === "waiting"
+      ? getBlindSeats([], 0)
+      : getBlindSeats(joinState.eligibleSeats, table.dealerSeat);
+  const callAmount = joinState.meSeat ? Math.max(0, table.currentBet - joinState.meSeat.roundBet) : 0;
+  const maxRaiseTo = joinState.meSeat ? joinState.meSeat.roundBet + joinState.meSeat.stack : 0;
+  const minimumRaiseTo =
+    table.currentBet === 0
+      ? table.bigBlind
+      : table.currentBet + Math.max(table.minRaise || table.bigBlind, table.bigBlind);
+  const canAct =
+    Boolean(joinState.meSeat) &&
+    table.status === "playing" &&
+    joinState.meSeat.seatState === "active" &&
+    joinState.meSeat.seatNo === table.activeSeat;
+  const visibleBoard = currentBoard(table).map(cardLabel);
+  const showdownVisible = table.phase === "showdown";
+  const preset = getTablePreset(table.slug);
+  const lobby = bundles.map((bundle) =>
+    buildLobbyEntry(bundle.table, bundle.seats, userId, playerBalance, selectedTableSlug),
+  );
+
+  return {
     tableId: table.id,
     slug: table.slug,
     name: table.name,
+    tableAccent: preset.accent,
+    tableVibe: preset.vibe,
+    tableDescription: preset.description,
+    selectedTableSlug,
     buyIn: table.buyIn,
     smallBlind: table.smallBlind,
     bigBlind: table.bigBlind,
@@ -1434,8 +1626,8 @@ async function buildPokerState(userId) {
     minRaise: table.minRaise,
     dealerSeat: table.dealerSeat,
     activeSeat: table.activeSeat,
-    playersSeated: eligibleSeats.length,
-    playersNeeded: Math.max(0, table.minPlayers - eligibleSeats.length),
+    playersSeated: joinState.eligibleSeats.length,
+    playersNeeded: Math.max(0, table.minPlayers - joinState.eligibleSeats.length),
     boardCards: visibleBoard,
     boardCount: visibleBoard.length,
     winnerSummary: table.winnerSummary || "",
@@ -1447,6 +1639,7 @@ async function buildPokerState(userId) {
     secondsToNextHand: table.nextHandAt
       ? Math.max(0, Math.ceil((fromSqlTimestamp(table.nextHandAt) - Date.now()) / 1000))
       : 0,
+    lobby,
     seats: Array.from({ length: table.maxPlayers }, (_unused, seatIndex) => {
       const seatNumber = seatIndex + 1;
       const seat = seats.find((entry) => entry.seatNo === seatNumber);
@@ -1479,28 +1672,28 @@ async function buildPokerState(userId) {
             : [],
       };
     }),
-    meSeat: meSeat
+    meSeat: joinState.meSeat
       ? {
-          seatNo: meSeat.seatNo,
-          stack: meSeat.stack,
-          seatState: meSeat.seatState,
+          seatNo: joinState.meSeat.seatNo,
+          stack: joinState.meSeat.stack,
+          seatState: joinState.meSeat.seatState,
           holeCards:
-            meSeat.holeCards.map(cardLabel),
+            joinState.meSeat.holeCards.map(cardLabel),
         }
       : null,
     actions: {
-      canJoin,
-      joinLabel,
-      joinReason,
-      canLeave,
-      leaveReason,
+      canJoin: joinState.canJoin,
+      joinLabel: joinState.joinLabel,
+      joinReason: joinState.joinReason,
+      canLeave: joinState.canLeave,
+      leaveReason: joinState.leaveReason,
       canAct,
       canFold: canAct,
       canCheck: canAct && callAmount === 0,
       canCall: canAct && callAmount > 0,
       callAmount,
       canRaise:
-        canAct && meSeat.stack > callAmount && maxRaiseTo >= minimumRaiseTo,
+        canAct && joinState.meSeat.stack > callAmount && maxRaiseTo >= minimumRaiseTo,
       minRaiseTo: minimumRaiseTo,
       maxRaiseTo,
     },
@@ -1508,10 +1701,14 @@ async function buildPokerState(userId) {
   };
 }
 
-async function joinPokerTable(userId) {
+async function joinPokerTable(userId, tableSlug = DEFAULT_TABLE_SLUG) {
   return withTransaction(async () => {
-    const { table } = await loadTableBundle();
+    const { table } = await loadTableBundle(tableSlug);
     const user = await get("SELECT * FROM users WHERE id = ?", [userId]);
+
+    if (!table) {
+      throw new Error("Table poker introuvable.");
+    }
 
     if (!user) {
       throw new Error("Compte introuvable.");
@@ -1633,14 +1830,18 @@ async function joinPokerTable(userId) {
 
     return {
       user: await get("SELECT * FROM users WHERE id = ?", [userId]),
-      poker: await buildPokerState(userId),
+      poker: await buildPokerState(userId, table.slug),
     };
   });
 }
 
-async function leavePokerTable(userId) {
+async function leavePokerTable(userId, tableSlug = DEFAULT_TABLE_SLUG) {
   return withTransaction(async () => {
-    const { table, seats } = await loadTableBundle();
+    const { table, seats } = await loadTableBundle(tableSlug);
+    if (!table) {
+      throw new Error("Table poker introuvable.");
+    }
+
     const seat = seats.find((entry) => entry.userId === userId);
     const user = await get("SELECT * FROM users WHERE id = ?", [userId]);
 
@@ -1708,16 +1909,16 @@ async function leavePokerTable(userId) {
 
     return {
       user: await get("SELECT * FROM users WHERE id = ?", [userId]),
-      poker: await buildPokerState(userId),
+      poker: await buildPokerState(userId, table.slug),
     };
   });
 }
 
-async function actOnPokerTable(userId, action, amount) {
-  const bundle = await processPlayerAction(userId, action, amount);
+async function actOnPokerTable(userId, tableSlug, action, amount) {
+  const bundle = await processPlayerAction(userId, tableSlug, action, amount);
   return {
     user: await get("SELECT * FROM users WHERE id = ?", [userId]),
-    poker: await buildPokerState(userId),
+    poker: await buildPokerState(userId, tableSlug),
     rawTable: bundle?.table || null,
   };
 }
@@ -1728,8 +1929,8 @@ async function startPokerEngine() {
   }
 
   pokerEngineStarted = true;
-  await ensurePokerTable();
-  await syncPokerTable();
+  await ensurePokerTables();
+  await syncPokerTables();
 
   pokerEngineTimer = setInterval(async () => {
     if (pokerEngineBusy) {
@@ -1738,7 +1939,7 @@ async function startPokerEngine() {
 
     pokerEngineBusy = true;
     try {
-      await syncPokerTable();
+      await syncPokerTables();
     } catch (error) {
       console.error("Erreur moteur poker:", error);
     } finally {
@@ -1752,7 +1953,8 @@ async function startPokerEngine() {
 }
 
 module.exports = {
-  TABLE_NAME,
+  DEFAULT_TABLE_SLUG,
+  TABLE_PRESETS,
   actOnPokerTable,
   buildPokerState,
   joinPokerTable,

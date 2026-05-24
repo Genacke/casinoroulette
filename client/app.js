@@ -49,7 +49,9 @@ const state = {
   pendingCashoutRequest: null,
   isSubmittingCashout: false,
   activeView: "roulette",
+  selectedPokerTableSlug: null,
   poker: null,
+  isLoadingPokerView: false,
   isSubmittingPokerAction: false,
 };
 
@@ -140,7 +142,10 @@ function cacheElements() {
     pokerRaiseButton: document.getElementById("pokerRaiseButton"),
     pokerSeatGrid: document.getElementById("pokerSeatGrid"),
     pokerStatusValue: document.getElementById("pokerStatusValue"),
+    pokerTableDescription: document.getElementById("pokerTableDescription"),
+    pokerTableList: document.getElementById("pokerTableList"),
     pokerTableTitle: document.getElementById("pokerTableTitle"),
+    pokerTableVibe: document.getElementById("pokerTableVibe"),
     pokerTurnValue: document.getElementById("pokerTurnValue"),
     pokerWinnerSummary: document.getElementById("pokerWinnerSummary"),
   });
@@ -173,6 +178,14 @@ function bindEvents() {
   elements.pokerFoldButton.addEventListener("click", () => submitPokerAction("fold"));
   elements.pokerCheckCallButton.addEventListener("click", onPokerPrimaryAction);
   elements.pokerRaiseButton.addEventListener("click", onPokerRaise);
+  elements.pokerTableList.addEventListener("click", (event) => {
+    const selector = event.target.closest("[data-select-poker-table]");
+    if (!selector) {
+      return;
+    }
+
+    selectPokerTable(selector.dataset.selectPokerTable);
+  });
   elements.pendingCashoutCard.addEventListener("click", (event) => {
     if (event.target.closest("[data-cancel-cashout]")) {
       cancelPendingCashoutRequest();
@@ -216,7 +229,7 @@ async function hydrateSession() {
 }
 
 async function loadBootstrap(options = {}) {
-  const payload = await api("/api/game/bootstrap");
+  const payload = await api(`/api/game/bootstrap${pokerTableQuery()}`);
   applyBootstrap(payload, options);
 }
 
@@ -226,6 +239,8 @@ function applyBootstrap(payload, options = {}) {
   state.pendingTicket = payload.pendingTicket || emptyPendingTicket(payload.currentRound?.id);
   state.cashoutRequests = payload.cashoutRequests || [];
   state.poker = payload.poker || null;
+  state.selectedPokerTableSlug =
+    payload.poker?.selectedTableSlug || state.selectedPokerTableSlug || null;
   state.pendingCashoutRequest =
     payload.pendingCashoutRequest ||
     state.cashoutRequests.find((request) => request.status === "pending") ||
@@ -352,7 +367,9 @@ async function logout() {
   state.cashoutRequests = [];
   state.pendingCashoutRequest = null;
   state.isSubmittingCashout = false;
+  state.selectedPokerTableSlug = null;
   state.poker = null;
+  state.isLoadingPokerView = false;
   state.activeView = "roulette";
   state.isSubmittingPokerAction = false;
   elements.cashoutRequestForm.reset();
@@ -931,6 +948,19 @@ function getPokerState() {
   return state.poker || state.bootstrap?.poker || null;
 }
 
+function getSelectedPokerTableSlug() {
+  return (
+    state.selectedPokerTableSlug ||
+    state.poker?.selectedTableSlug ||
+    state.bootstrap?.poker?.selectedTableSlug ||
+    ""
+  );
+}
+
+function pokerTableQuery(tableSlug = getSelectedPokerTableSlug()) {
+  return tableSlug ? `?table=${encodeURIComponent(tableSlug)}` : "";
+}
+
 function formatPokerStatus(status) {
   if (status === "playing") {
     return "Main en cours";
@@ -994,6 +1024,46 @@ function renderPokerBoard(poker) {
   elements.pokerBoard.innerHTML = slots.join("");
 }
 
+function renderPokerLobby(poker) {
+  const tables = poker?.lobby || [];
+
+  if (!tables.length) {
+    elements.pokerTableList.innerHTML = `
+      <div class="empty-state">Les croupiers preparent les tables du salon.</div>
+    `;
+    return;
+  }
+
+  elements.pokerTableList.innerHTML = tables
+    .map(
+      (table) => `
+        <button
+          class="poker-table-card ${table.isSelected ? "active" : ""} accent-${escapeHtml(table.accent || "gold")}"
+          type="button"
+          data-select-poker-table="${escapeHtml(table.slug)}"
+        >
+          <div class="poker-table-card-head">
+            <div>
+              <strong>${escapeHtml(table.name)}</strong>
+              <div class="bet-meta">${escapeHtml(table.vibe)}</div>
+            </div>
+            <span class="status-pill">${escapeHtml(table.occupancyLabel)}</span>
+          </div>
+          <div class="poker-table-card-meta">
+            <span>${escapeHtml(table.statusLabel)}</span>
+            <span>${formatKamas(table.smallBlind)} / ${formatKamas(table.bigBlind)}</span>
+          </div>
+          <div class="bet-meta">${escapeHtml(table.description)}</div>
+          <div class="poker-table-card-footer">
+            <span>Cave ${formatKamas(table.buyIn)}</span>
+            <span>${table.isSeated ? "Assis" : table.joinLabel}</span>
+          </div>
+        </button>
+      `,
+    )
+    .join("");
+}
+
 function renderPokerSeats(poker) {
   const seats = poker?.seats || [];
 
@@ -1001,7 +1071,7 @@ function renderPokerSeats(poker) {
     .map((seat) => {
       if (seat.isEmpty) {
         return `
-          <article class="poker-seat empty">
+          <article class="poker-seat empty seat-${seat.seatNo}">
             <div class="section-title">Siege ${seat.seatNo}</div>
             <div class="bet-meta">Libre</div>
           </article>
@@ -1015,7 +1085,7 @@ function renderPokerSeats(poker) {
           ).join("");
 
       return `
-        <article class="poker-seat ${seat.isTurn ? "turn" : ""} ${seat.isMe ? "me" : ""}">
+        <article class="poker-seat seat-${seat.seatNo} ${seat.isTurn ? "turn" : ""} ${seat.isMe ? "me" : ""}">
           <div class="poker-seat-head">
             <strong>${escapeHtml(seat.username)}</strong>
             <span class="status-pill seat-status">${escapeHtml(formatPokerSeatState(seat.seatState))}</span>
@@ -1026,7 +1096,8 @@ function renderPokerSeats(poker) {
             ${seat.isSmallBlind ? " | SB" : ""}
             ${seat.isBigBlind ? " | BB" : ""}
           </div>
-          <div class="bet-meta">Stack ${formatKamas(seat.stack)} | Engage ${formatKamas(seat.handContribution)}</div>
+          <div class="bet-meta">Stack ${formatKamas(seat.stack)}</div>
+          <div class="bet-meta">Engage ${formatKamas(seat.handContribution)}</div>
           <div class="poker-seat-cards">${cardsMarkup || '<div class="bet-meta">Cartes cachees</div>'}</div>
         </article>
       `;
@@ -1041,6 +1112,7 @@ function seatLabelByNumber(poker, seatNo) {
 function renderPokerActions(poker) {
   const actions = poker?.actions || {};
   const meSeat = poker?.meSeat;
+  const busy = state.isSubmittingPokerAction || state.isLoadingPokerView;
 
   if (!poker) {
     elements.joinPokerButton.disabled = true;
@@ -1057,14 +1129,14 @@ function renderPokerActions(poker) {
     return;
   }
 
-  elements.joinPokerButton.disabled = !actions.canJoin || state.isSubmittingPokerAction;
-  elements.leavePokerButton.disabled = !actions.canLeave || state.isSubmittingPokerAction;
+  elements.joinPokerButton.disabled = !actions.canJoin || busy;
+  elements.leavePokerButton.disabled = !actions.canLeave || busy;
   elements.joinPokerButton.textContent = actions.joinLabel || "Rejoindre";
-  elements.pokerFoldButton.disabled = !actions.canFold || state.isSubmittingPokerAction;
+  elements.pokerFoldButton.disabled = !actions.canFold || busy;
   elements.pokerCheckCallButton.disabled =
-    !(actions.canCheck || actions.canCall) || state.isSubmittingPokerAction;
-  elements.pokerRaiseButton.disabled = !actions.canRaise || state.isSubmittingPokerAction;
-  elements.pokerRaiseAmount.disabled = !actions.canRaise || state.isSubmittingPokerAction;
+    !(actions.canCheck || actions.canCall) || busy;
+  elements.pokerRaiseButton.disabled = !actions.canRaise || busy;
+  elements.pokerRaiseAmount.disabled = !actions.canRaise || busy;
   elements.pokerRaiseAmount.min = String(actions.minRaiseTo || 0);
   elements.pokerRaiseAmount.max = String(actions.maxRaiseTo || 0);
   if (actions.canRaise && !elements.pokerRaiseAmount.value) {
@@ -1142,7 +1214,9 @@ function renderPoker() {
   const poker = getPokerState();
 
   if (!poker) {
-    elements.pokerTableTitle.textContent = "Table des 10M";
+    elements.pokerTableTitle.textContent = "Table d'Amakna";
+    elements.pokerTableVibe.textContent = "Table centrale";
+    elements.pokerTableDescription.textContent = "Chargement du salon poker...";
     elements.pokerBuyInValue.textContent = formatKamas(10000000);
     elements.pokerBlindValue.textContent = "200 000 / 400 000";
     elements.pokerStatusValue.textContent = "En attente";
@@ -1152,6 +1226,7 @@ function renderPoker() {
     elements.pokerPlayersNeeded.textContent = "2 joueurs pour lancer";
     elements.pokerWinnerSummary.textContent = "La table attend des aventuriers.";
     elements.pokerJoinState.textContent = "Chargement de la table poker.";
+    elements.pokerTableList.innerHTML = `<div class="empty-state">Chargement des tables...</div>`;
     elements.pokerSeatGrid.innerHTML = `<div class="empty-state">Chargement de la table...</div>`;
     elements.pokerActionLog.innerHTML = `<div class="empty-state">Aucune action enregistree.</div>`;
     renderPokerBoard({
@@ -1161,7 +1236,11 @@ function renderPoker() {
     return;
   }
 
+  renderPokerLobby(poker);
   elements.pokerTableTitle.textContent = poker.name;
+  elements.pokerTableVibe.textContent = poker.tableVibe || "Table centrale";
+  elements.pokerTableDescription.textContent =
+    poker.tableDescription || "Le croupier appelle les prochains joueurs.";
   elements.pokerBuyInValue.textContent = formatKamas(poker.buyIn);
   elements.pokerBlindValue.textContent = `${formatKamas(poker.smallBlind)} / ${formatKamas(poker.bigBlind)}`;
   elements.pokerStatusValue.textContent = formatPokerStatus(poker.status);
@@ -1224,8 +1303,40 @@ function updateSpinButtons() {
   updateCashoutControls();
 }
 
+async function loadPokerStateForTable(tableSlug, options = {}) {
+  if (!state.me || !tableSlug) {
+    return;
+  }
+
+  state.isLoadingPokerView = true;
+  state.selectedPokerTableSlug = tableSlug;
+  renderPoker();
+
+  try {
+    const payload = await api(`/api/poker/state${pokerTableQuery(tableSlug)}`);
+    state.poker = payload.poker;
+    state.selectedPokerTableSlug = payload.poker?.selectedTableSlug || tableSlug;
+    renderPoker();
+  } catch (error) {
+    if (options.showToast !== false) {
+      showToast(error.message, "error");
+    }
+  } finally {
+    state.isLoadingPokerView = false;
+    renderPoker();
+  }
+}
+
+async function selectPokerTable(tableSlug) {
+  if (!tableSlug || tableSlug === getSelectedPokerTableSlug() || state.isLoadingPokerView) {
+    return;
+  }
+
+  await loadPokerStateForTable(tableSlug, { showToast: false });
+}
+
 async function joinPokerTable() {
-  if (state.isSubmittingPokerAction) {
+  if (state.isSubmittingPokerAction || state.isLoadingPokerView) {
     return;
   }
 
@@ -1235,10 +1346,14 @@ async function joinPokerTable() {
   try {
     const payload = await api("/api/poker/join", {
       method: "POST",
+      body: JSON.stringify({
+        tableSlug: getSelectedPokerTableSlug(),
+      }),
     });
 
     state.me = payload.user;
     state.poker = payload.poker;
+    state.selectedPokerTableSlug = payload.poker?.selectedTableSlug || getSelectedPokerTableSlug();
     renderMetrics();
     renderPoker();
     showToast(payload.message, "success");
@@ -1251,7 +1366,7 @@ async function joinPokerTable() {
 }
 
 async function leavePokerTable() {
-  if (state.isSubmittingPokerAction) {
+  if (state.isSubmittingPokerAction || state.isLoadingPokerView) {
     return;
   }
 
@@ -1261,10 +1376,14 @@ async function leavePokerTable() {
   try {
     const payload = await api("/api/poker/leave", {
       method: "POST",
+      body: JSON.stringify({
+        tableSlug: getSelectedPokerTableSlug(),
+      }),
     });
 
     state.me = payload.user;
     state.poker = payload.poker;
+    state.selectedPokerTableSlug = payload.poker?.selectedTableSlug || getSelectedPokerTableSlug();
     renderMetrics();
     renderPoker();
     showToast(payload.message, "success");
@@ -1287,7 +1406,7 @@ function onPokerRaise() {
 }
 
 async function submitPokerAction(action, amount) {
-  if (state.isSubmittingPokerAction) {
+  if (state.isSubmittingPokerAction || state.isLoadingPokerView) {
     return;
   }
 
@@ -1298,6 +1417,7 @@ async function submitPokerAction(action, amount) {
     const payload = await api("/api/poker/action", {
       method: "POST",
       body: JSON.stringify({
+        tableSlug: getSelectedPokerTableSlug(),
         action,
         amount,
       }),
@@ -1305,6 +1425,7 @@ async function submitPokerAction(action, amount) {
 
     state.me = payload.user;
     state.poker = payload.poker;
+    state.selectedPokerTableSlug = payload.poker?.selectedTableSlug || getSelectedPokerTableSlug();
     renderMetrics();
     renderPoker();
     showToast(payload.message, "success");
@@ -1701,7 +1822,7 @@ async function pollRoundState() {
   state.isRoundPollInFlight = true;
 
   try {
-    const payload = await api("/api/game/round-state");
+    const payload = await api(`/api/game/round-state${pokerTableQuery()}`);
     await handleRoundState(payload);
   } catch (_error) {
     // Le prochain cycle reessaiera.
@@ -1715,6 +1836,8 @@ async function handleRoundState(payload) {
   state.pendingTicket = payload.pendingTicket || emptyPendingTicket(payload.currentRound?.id);
   state.cashoutRequests = payload.cashoutRequests || state.cashoutRequests;
   state.poker = payload.poker || state.poker;
+  state.selectedPokerTableSlug =
+    payload.poker?.selectedTableSlug || state.selectedPokerTableSlug || null;
   state.pendingCashoutRequest =
     payload.pendingCashoutRequest ||
     state.cashoutRequests.find((request) => request.status === "pending") ||
