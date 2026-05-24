@@ -8,7 +8,7 @@ Site de roulette style casino pour serveur prive Dofus, avec monnaie virtuelle e
 - Onglet poker Texas Hold'em no limit avec cave fixe
 - Resultat calcule uniquement cote serveur
 - Manches globales synchronisees pour tous les joueurs
-- Une manche ouvre toutes les 2 minutes par defaut
+- Une manche ouvre toutes les 30 secondes par defaut
 - Les mises se verrouillent quelques secondes avant le tirage
 - Solde stocke en base et jamais modifiable par le joueur
 - Connexion joueur + connexion admin
@@ -99,7 +99,7 @@ Variables principales:
 - `MIN_BET=200000`
 - `MAX_BET=2000000`
 - `GREEN_MAX_BET=500000`
-- `ROUND_INTERVAL_SECONDS=120`
+- `ROUND_INTERVAL_SECONDS=30`
 - `ROUND_BET_LOCK_SECONDS=5`
 - `AUTO_SPIN_MAX_ROUNDS=25`
 - `POKER_TABLE_BUY_IN=10000000`
@@ -145,7 +145,7 @@ npm run dev
 ## Systeme de manche
 
 - Tous les joueurs jouent la meme manche en meme temps.
-- La duree d'une manche est reglee par `ROUND_INTERVAL_SECONDS`.
+- La duree d'une manche est reglee par `ROUND_INTERVAL_SECONDS`, avec un plafond actuel a `30` secondes.
 - La fermeture des mises avant tirage est reglee par `ROUND_BET_LOCK_SECONDS`.
 - Le joueur envoie un ticket pour la manche en cours.
 - Les kamas du ticket sont reserves immediatement.
@@ -271,7 +271,7 @@ Le chemin le plus simple pour cette app est Railway avec le `Dockerfile` du repo
 - `MIN_BET=200000`
 - `MAX_BET=2000000`
 - `GREEN_MAX_BET=500000`
-- `ROUND_INTERVAL_SECONDS=120`
+- `ROUND_INTERVAL_SECONDS=30`
 - `ROUND_BET_LOCK_SECONDS=5`
 - `AUTO_SPIN_MAX_ROUNDS=25`
 - `POKER_TABLE_BUY_IN=10000000`
@@ -290,7 +290,7 @@ Le chemin le plus simple pour cette app est Railway avec le `Dockerfile` du repo
 - `railway.json` configure le build Dockerfile et le healthcheck `/api/health`.
 - Le serveur ecoute bien sur `PORT`.
 - SQLite peut persister sur le volume Railway sans changer le code.
-- Les manches globales toutes les 2 minutes continuent de tourner cote serveur.
+- Les manches globales toutes les 30 secondes continuent de tourner cote serveur.
 
 ## Production
 
@@ -305,5 +305,5 @@ Avant mise en ligne:
 Note importante pour l'hebergement:
 
 - Le mode SQLite local convient tres bien en local ou sur un petit serveur dedie.
-- Pour une roulette synchronisee toutes les 2 minutes, les hebergeurs gratuits qui s'endorment ou suppriment le stockage local ne sont pas fiables.
+- Pour une roulette synchronisee toutes les 30 secondes, les hebergeurs gratuits qui s'endorment ou suppriment le stockage local ne sont pas fiables.
 - Si tu veux une vraie mise en ligne publique et stable, le plus propre est soit un petit hebergement always-on, soit une migration vers une base distante + une plateforme avec taches planifiees.

@@ -23,7 +23,10 @@ const config = {
   minBet: toInt(process.env.MIN_BET, 200000),
   maxBet: toInt(process.env.MAX_BET, 2000000),
   greenMaxBet: toInt(process.env.GREEN_MAX_BET, 500000),
-  roundIntervalSeconds: toInt(process.env.ROUND_INTERVAL_SECONDS, 120),
+  roundIntervalSeconds: Math.max(
+    1,
+    Math.min(30, toInt(process.env.ROUND_INTERVAL_SECONDS, 30)),
+  ),
   roundBetLockSeconds: toInt(process.env.ROUND_BET_LOCK_SECONDS, 5),
   autoSpinMaxRounds: toInt(process.env.AUTO_SPIN_MAX_ROUNDS, 25),
   pokerTableBuyIn: toInt(process.env.POKER_TABLE_BUY_IN, 10000000),
