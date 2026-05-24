@@ -11,7 +11,7 @@ const RED_NUMBERS = new Set([
   1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36,
 ]);
 
-const CHIP_VALUES = [200000, 500000, 1000000, 2000000, 5000000];
+const CHIP_VALUES = [200000, 500000, 1000000, 1500000, 2000000];
 const DEFAULT_PROBABILITIES = [
   { type: "number", label: "Numero exact", probability: 2.7, totalReturnMultiplier: 36.26 },
   { type: "color", label: "Rouge / Noir", probability: 48.65, totalReturnMultiplier: 2.01 },
@@ -508,11 +508,11 @@ function getMinBet() {
 }
 
 function getTicketMax() {
-  return Number(getRouletteRules().maxBet || 10000000);
+  return Number(getRouletteRules().maxBet || 2000000);
 }
 
 function getGreenMaxBet() {
-  return Number(getRouletteRules().greenMaxBet || 1000000);
+  return Number(getRouletteRules().greenMaxBet || 500000);
 }
 
 function replaceBetSlip(bets) {
@@ -733,7 +733,7 @@ function renderMetrics() {
 function renderBetRulesSummary() {
   elements.betRulesSummary.innerHTML = `
     <span>Mise mini ${formatKamas(getMinBet())}</span>
-    <span>Ticket max ${formatKamas(getTicketMax())}</span>
+    <span>Autres mises max ${formatKamas(getTicketMax())}</span>
     <span>0 limite a ${formatKamas(getGreenMaxBet())}</span>
   `;
 }
@@ -1014,14 +1014,17 @@ function renderPokerCard(card, options = {}) {
 
 function renderPokerBoard(poker) {
   const cards = poker?.boardCards || [];
-  const slots = [];
+  const flop = Array.from({ length: 3 }, (_unused, index) =>
+    renderPokerCard(cards[index], { empty: !cards[index] }),
+  ).join("");
+  const turn = renderPokerCard(cards[3], { empty: !cards[3] });
+  const river = renderPokerCard(cards[4], { empty: !cards[4] });
 
-  for (let index = 0; index < 5; index += 1) {
-    const card = cards[index];
-    slots.push(renderPokerCard(card, { empty: !card }));
-  }
-
-  elements.pokerBoard.innerHTML = slots.join("");
+  elements.pokerBoard.innerHTML = `
+    <div class="poker-board-group flop-group">${flop}</div>
+    <div class="poker-board-group street-group">${turn}</div>
+    <div class="poker-board-group street-group">${river}</div>
+  `;
 }
 
 function renderPokerLobby(poker) {
@@ -1152,7 +1155,11 @@ function renderPokerActions(poker) {
   } else {
     elements.pokerMeStatus.textContent = `Siege ${meSeat.seatNo} | ${formatPokerSeatState(meSeat.seatState)} | ${formatKamas(meSeat.stack)}`;
     elements.pokerJoinState.textContent =
-      actions.leaveReason || actions.joinReason || "Ta place est enregistree.";
+      poker.status === "showdown"
+        ? poker.secondsToNextHand > 0
+          ? `Pause entre deux mains: ${poker.secondsToNextHand}s pour quitter ou rester assis.`
+          : "Pause entre deux mains, tu peux quitter la table maintenant."
+        : actions.leaveReason || actions.joinReason || "Ta place est enregistree.";
     elements.pokerHeroCards.innerHTML = meSeat.holeCards?.length
       ? meSeat.holeCards.map((card) => renderPokerCard(card)).join("")
       : `<div class="empty-state">Tes cartes apparaitront au debut de la prochaine main.</div>`;
@@ -1173,7 +1180,10 @@ function renderPokerActions(poker) {
   }
 
   if (poker.status === "showdown") {
-    elements.pokerActionHint.textContent = poker.winnerSummary || "Resolution de la main.";
+    elements.pokerActionHint.textContent =
+      poker.secondsToNextHand > 0
+        ? `Pause de ${poker.secondsToNextHand}s avant la prochaine main.`
+        : poker.winnerSummary || "Resolution de la main.";
     return;
   }
 

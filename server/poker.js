@@ -60,6 +60,15 @@ function inSeconds(seconds) {
   return toSqlTimestamp(Date.now() + seconds * 1000);
 }
 
+function secondsUntil(timestampValue) {
+  const parsed = fromSqlTimestamp(timestampValue);
+  if (!parsed) {
+    return 0;
+  }
+
+  return Math.max(0, Math.ceil((parsed - Date.now()) / 1000));
+}
+
 function parseCards(rawValue) {
   try {
     const parsed = JSON.parse(rawValue || "[]");
@@ -1504,6 +1513,7 @@ function buildLobbyEntry(table, seats, userId, playerBalance, selectedTableSlug)
   const joinState = buildJoinLeaveState(table, seats, userId, playerBalance);
   const playersSeated = joinState.eligibleSeats.length;
   const playersNeeded = Math.max(0, table.minPlayers - playersSeated);
+  const secondsToNextHand = secondsUntil(table.nextHandAt);
 
   return {
     slug: table.slug,
@@ -1534,7 +1544,9 @@ function buildLobbyEntry(table, seats, userId, playerBalance, selectedTableSlug)
       table.status === "playing"
         ? `Main #${table.handNumber}`
         : table.status === "showdown"
-          ? "Showdown"
+          ? secondsToNextHand > 0
+            ? `Pause ${secondsToNextHand}s`
+            : "Pause"
           : playersNeeded > 0
             ? `${playersNeeded} joueur(s) manquant(s)`
             : "Depart imminent",

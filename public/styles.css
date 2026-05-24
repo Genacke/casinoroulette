@@ -429,8 +429,7 @@ textarea:focus {
 .poker-grid {
   grid-template-areas:
     "lobby arena"
-    "controls arena"
-    "log log";
+    "log arena";
   grid-template-columns: minmax(290px, 330px) minmax(0, 1fr);
 }
 
@@ -452,10 +451,6 @@ textarea:focus {
 
 .poker-arena-panel {
   grid-area: arena;
-}
-
-.poker-controls-panel {
-  grid-area: controls;
 }
 
 .poker-log-panel {
@@ -535,10 +530,17 @@ textarea:focus {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.poker-stage-layout {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 14px;
+  align-items: start;
+}
+
 .poker-felt {
   position: relative;
-  min-height: 640px;
-  margin-top: 16px;
+  min-height: 560px;
   padding: 28px;
   border-radius: 40px;
   border: 1px solid rgba(216, 181, 102, 0.16);
@@ -562,8 +564,14 @@ textarea:focus {
 .poker-board {
   position: absolute;
   left: 50%;
-  top: 43%;
+  top: 40%;
   transform: translate(-50%, -50%);
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.poker-board-group {
   display: flex;
   gap: 10px;
 }
@@ -612,7 +620,7 @@ textarea:focus {
 .poker-center-pot {
   position: absolute;
   left: 50%;
-  top: 55%;
+  top: 52%;
   transform: translateX(-50%);
   display: grid;
   justify-items: center;
@@ -632,7 +640,7 @@ textarea:focus {
 
 .poker-seat-ring {
   position: relative;
-  min-height: 584px;
+  min-height: 504px;
 }
 
 .poker-seat {
@@ -667,13 +675,13 @@ textarea:focus {
 }
 
 .poker-seat.seat-2 {
-  top: 108px;
+  top: 82px;
   right: 18px;
 }
 
 .poker-seat.seat-3 {
   right: 36px;
-  bottom: 112px;
+  bottom: 92px;
 }
 
 .poker-seat.seat-4 {
@@ -684,11 +692,11 @@ textarea:focus {
 
 .poker-seat.seat-5 {
   left: 36px;
-  bottom: 112px;
+  bottom: 92px;
 }
 
 .poker-seat.seat-6 {
-  top: 108px;
+  top: 82px;
   left: 18px;
 }
 
@@ -714,11 +722,31 @@ textarea:focus {
 }
 
 .poker-hero-cards {
-  min-height: 108px;
+  min-height: 88px;
+}
+
+.poker-hero-panel .poker-card {
+  width: 56px;
+  min-height: 82px;
+  border-radius: 16px;
+}
+
+.poker-hero-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(216, 181, 102, 0.1);
+  background: rgba(10, 8, 7, 0.28);
+  align-self: start;
+}
+
+.poker-hero-head {
+  align-items: flex-start;
 }
 
 .poker-action-bar {
-  margin-top: 14px;
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
@@ -1445,7 +1473,6 @@ tr:last-child td {
     grid-template-areas:
       "lobby"
       "arena"
-      "controls"
       "log";
   }
 
@@ -1482,6 +1509,10 @@ tr:last-child td {
   .stats-grid,
   .poker-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .poker-stage-layout {
+    grid-template-columns: 1fr;
   }
 
   .poker-felt {

@@ -42,8 +42,8 @@
             <div class="feature-chip">Poker Texas Hold'em</div>
             <div class="feature-chip">Rounds toutes les 2 min</div>
             <div class="feature-chip">Mise mini 200 000</div>
-            <div class="feature-chip">Ticket max 10 000 000</div>
-            <div class="feature-chip">0 plafonne a 1 000 000</div>
+            <div class="feature-chip">Autres mises max 2 000 000</div>
+            <div class="feature-chip">0 plafonne a 500 000</div>
             <div class="feature-chip">Table poker 10 000 000</div>
             <div class="feature-chip">Retrait -2%</div>
             <div class="feature-chip">Auto spin</div>
@@ -99,7 +99,7 @@
             <strong id="minBetValue">0 kamas</strong>
           </div>
           <div class="metric-card">
-            <span>Ticket max</span>
+            <span>Mise max</span>
             <strong id="ticketMaxValue">0 kamas</strong>
           </div>
           <div class="metric-card">
@@ -258,6 +258,67 @@
                   </div>
                 </div>
 
+                <div class="poker-stage-layout">
+                  <div class="poker-felt">
+                    <div id="pokerBoard" class="poker-board"></div>
+                    <div class="poker-center-pot">
+                      <span>Pot central</span>
+                      <strong id="pokerPotValue">0 kamas</strong>
+                    </div>
+                    <div id="pokerWinnerSummary" class="poker-winner-summary">
+                      En attente du prochain duel.
+                    </div>
+                    <div id="pokerSeatGrid" class="poker-seat-ring"></div>
+                  </div>
+
+                  <aside class="poker-hero-panel">
+                    <div class="panel-header poker-hero-head">
+                      <div>
+                        <p class="eyebrow">Ta place</p>
+                        <h3 id="pokerMeStatus">Pas assis a la table</h3>
+                      </div>
+                      <div class="poker-action-cluster">
+                        <button id="joinPokerButton" class="secondary-button" type="button">
+                          Rejoindre
+                        </button>
+                        <button id="leavePokerButton" class="ghost-button" type="button">
+                          Quitter
+                        </button>
+                      </div>
+                    </div>
+                    <div class="poker-action-bar">
+                      <button id="pokerFoldButton" class="ghost-button" type="button">Fold</button>
+                      <button id="pokerCheckCallButton" class="primary-button" type="button">
+                        Check
+                      </button>
+                      <label class="poker-raise-box">
+                        <span>Relance a</span>
+                        <input id="pokerRaiseAmount" type="number" min="0" step="1" />
+                      </label>
+                      <button id="pokerRaiseButton" class="secondary-button" type="button">
+                        Relancer
+                      </button>
+                    </div>
+
+                    <div id="pokerActionHint" class="bet-meta">
+                      Rejoins la table pour recevoir deux cartes et jouer des mains Hold'em.
+                    </div>
+                    <div id="pokerHeroCards" class="poker-hero-cards"></div>
+                    <div id="pokerJoinState" class="bet-meta poker-join-state">
+                      Rejoins la table pour la prochaine main.
+                    </div>
+
+                    <div class="poker-rules-list">
+                      <div class="feature-chip">Texas Hold'em no limit</div>
+                      <div class="feature-chip">La main part a 2 joueurs</div>
+                      <div class="feature-chip">Cave fixe 10 000 000</div>
+                      <div class="feature-chip">Petite blind 200 000</div>
+                      <div class="feature-chip">Grosse blind 400 000</div>
+                      <div class="feature-chip">Pause entre deux mains</div>
+                    </div>
+                  </aside>
+                </div>
+
                 <div class="poker-summary-grid">
                   <div class="ticket-info">
                     <span>Cave fixe</span>
@@ -279,66 +340,6 @@
                     <span>Tour</span>
                     <strong id="pokerTurnValue">--</strong>
                   </div>
-                </div>
-
-                <div class="poker-felt">
-                  <div id="pokerBoard" class="poker-board"></div>
-                  <div class="poker-center-pot">
-                    <span>Pot central</span>
-                    <strong id="pokerPotValue">0 kamas</strong>
-                  </div>
-                  <div id="pokerWinnerSummary" class="poker-winner-summary">
-                    En attente du prochain duel.
-                  </div>
-                  <div id="pokerSeatGrid" class="poker-seat-ring"></div>
-                </div>
-              </section>
-
-              <section class="panel poker-controls-panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow">Ta place</p>
-                    <h3 id="pokerMeStatus">Pas assis a la table</h3>
-                  </div>
-                  <div class="poker-action-cluster">
-                    <button id="joinPokerButton" class="secondary-button" type="button">
-                      Rejoindre
-                    </button>
-                    <button id="leavePokerButton" class="ghost-button" type="button">
-                      Quitter
-                    </button>
-                  </div>
-                </div>
-                <div id="pokerJoinState" class="bet-meta poker-join-state">
-                  Rejoins la table pour la prochaine main.
-                </div>
-                <div id="pokerHeroCards" class="poker-hero-cards"></div>
-
-                <div class="poker-action-bar">
-                  <button id="pokerFoldButton" class="ghost-button" type="button">Fold</button>
-                  <button id="pokerCheckCallButton" class="primary-button" type="button">
-                    Check
-                  </button>
-                  <label class="poker-raise-box">
-                    <span>Relance a</span>
-                    <input id="pokerRaiseAmount" type="number" min="0" step="1" />
-                  </label>
-                  <button id="pokerRaiseButton" class="secondary-button" type="button">
-                    Relancer
-                  </button>
-                </div>
-
-                <div id="pokerActionHint" class="bet-meta">
-                  Rejoins la table pour recevoir deux cartes et jouer des mains Hold'em.
-                </div>
-
-                <div class="poker-rules-list">
-                  <div class="feature-chip">Texas Hold'em no limit</div>
-                  <div class="feature-chip">La main part a 2 joueurs</div>
-                  <div class="feature-chip">Cave fixe 10 000 000</div>
-                  <div class="feature-chip">Petite blind 200 000</div>
-                  <div class="feature-chip">Grosse blind 400 000</div>
-                  <div class="feature-chip">Tour chronometre</div>
                 </div>
               </section>
 

@@ -97,8 +97,8 @@ Variables principales:
 - `HOUSE_EDGE_PERCENT=2`
 - `CASHOUT_FEE_PERCENT=2`
 - `MIN_BET=200000`
-- `MAX_BET=10000000`
-- `GREEN_MAX_BET=1000000`
+- `MAX_BET=2000000`
+- `GREEN_MAX_BET=500000`
 - `ROUND_INTERVAL_SECONDS=120`
 - `ROUND_BET_LOCK_SECONDS=5`
 - `AUTO_SPIN_MAX_ROUNDS=25`
@@ -108,7 +108,7 @@ Variables principales:
 - `POKER_MIN_PLAYERS=2`
 - `POKER_MAX_PLAYERS=6`
 - `POKER_TURN_SECONDS=25`
-- `POKER_SHOWDOWN_SECONDS=8`
+- `POKER_SHOWDOWN_SECONDS=10`
 
 ### 3. Creer des comptes de demo optionnels
 
@@ -269,8 +269,8 @@ Le chemin le plus simple pour cette app est Railway avec le `Dockerfile` du repo
 - `HOUSE_EDGE_PERCENT`
 - `CASHOUT_FEE_PERCENT=2`
 - `MIN_BET=200000`
-- `MAX_BET=10000000`
-- `GREEN_MAX_BET=1000000`
+- `MAX_BET=2000000`
+- `GREEN_MAX_BET=500000`
 - `ROUND_INTERVAL_SECONDS=120`
 - `ROUND_BET_LOCK_SECONDS=5`
 - `AUTO_SPIN_MAX_ROUNDS=25`
@@ -280,7 +280,7 @@ Le chemin le plus simple pour cette app est Railway avec le `Dockerfile` du repo
 - `POKER_MIN_PLAYERS=2`
 - `POKER_MAX_PLAYERS=6`
 - `POKER_TURN_SECONDS=25`
-- `POKER_SHOWDOWN_SECONDS=8`
+- `POKER_SHOWDOWN_SECONDS=10`
 6. Optionnel: fixe `DB_PATH=/data/casino.sqlite` si tu veux un chemin explicite.
    Sinon l'application utilisera automatiquement `RAILWAY_VOLUME_MOUNT_PATH` quand le volume est attache.
 7. Deploy.
