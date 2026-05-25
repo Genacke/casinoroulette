@@ -67,6 +67,42 @@
   border: 1px solid rgba(255, 214, 144, 0.12);
 }
 
+.admin-reset-trigger {
+  margin-top: 14px;
+  width: 100%;
+}
+
+.admin-reset-card {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(10, 6, 8, 0.58);
+  border: 1px solid rgba(255, 214, 144, 0.14);
+  display: grid;
+  gap: 10px;
+}
+
+.admin-reset-code-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.admin-reset-code {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 214, 144, 0.12);
+  color: var(--gold-soft);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
 .toolbar-form {
   grid-template-columns: 1fr auto;
   align-items: center;

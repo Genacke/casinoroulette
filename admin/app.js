@@ -5,6 +5,8 @@ const state = {
   dashboard: null,
   users: [],
   selectedUser: null,
+  latestResetCode: null,
+  isResettingPassword: false,
   currentLogType: "spins",
   refreshTimer: null,
 };
@@ -72,6 +74,7 @@ function bindEvents() {
     state.selectedUser = state.users.find((user) => user.id === selectedId) || null;
     renderSelectedPlayer();
   });
+  elements.selectedPlayerCard.addEventListener("click", onSelectedPlayerCardAction);
 }
 
 async function hydrateAdminSession() {
@@ -146,6 +149,8 @@ async function logout() {
   state.dashboard = null;
   state.users = [];
   state.selectedUser = null;
+  state.latestResetCode = null;
+  state.isResettingPassword = false;
   showAuth();
 }
 
@@ -323,6 +328,9 @@ function renderSelectedPlayer() {
     return;
   }
 
+  const latestResetCode =
+    state.latestResetCode?.userId === state.selectedUser.id ? state.latestResetCode : null;
+
   elements.selectedPlayerCard.innerHTML = `
     <strong>${escapeHtml(state.selectedUser.username)}</strong>
     <div class="bet-meta">Solde: ${formatKamas(state.selectedUser.balance)}</div>
@@ -330,7 +338,52 @@ function renderSelectedPlayer() {
     <div class="bet-meta">Profit: ${formatKamas(state.selectedUser.totalProfit)}</div>
     <div class="bet-meta">Plus gros gain: ${formatKamas(state.selectedUser.highestWin)}</div>
     <div class="bet-meta">Inscrit le: ${formatDate(state.selectedUser.createdAt)}</div>
+    <button
+      class="secondary-button admin-reset-trigger"
+      type="button"
+      data-reset-password
+      ${state.isResettingPassword ? "disabled" : ""}
+    >
+      ${state.isResettingPassword ? "Generation..." : "Reinitialiser le mot de passe"}
+    </button>
+    ${
+      latestResetCode
+        ? `
+          <div class="admin-reset-card">
+            <div class="section-title">Code temporaire a transmettre</div>
+            <div class="admin-reset-code-row">
+              <code class="admin-reset-code">${escapeHtml(latestResetCode.code)}</code>
+              <button class="ghost-button" type="button" data-copy-reset-code>Copier</button>
+            </div>
+            <div class="bet-meta">
+              Ce code remplace le mot de passe actuel et deconnecte les anciennes sessions.
+            </div>
+            <div class="bet-meta">Genere le ${formatDate(latestResetCode.createdAt)}</div>
+          </div>
+        `
+        : ""
+    }
   `;
+}
+
+async function onSelectedPlayerCardAction(event) {
+  const resetButton = event.target.closest("[data-reset-password]");
+  if (resetButton) {
+    await requestPasswordReset();
+    return;
+  }
+
+  const copyButton = event.target.closest("[data-copy-reset-code]");
+  if (!copyButton || !state.latestResetCode?.code) {
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(state.latestResetCode.code);
+    showToast("Code temporaire copie.", "success");
+  } catch (_error) {
+    showToast("Impossible de copier automatiquement le code.", "error");
+  }
 }
 
 async function onBalanceAdjust(event) {
@@ -364,6 +417,45 @@ async function onBalanceAdjust(event) {
     event.currentTarget.reset();
   } catch (error) {
     showToast(error.message, "error");
+  }
+}
+
+async function requestPasswordReset() {
+  if (!state.selectedUser) {
+    showToast("Selectionne un joueur avant de generer un code.", "error");
+    return;
+  }
+
+  if (state.isResettingPassword) {
+    return;
+  }
+
+  state.isResettingPassword = true;
+  renderSelectedPlayer();
+
+  try {
+    const payload = await api(`/api/admin/users/${state.selectedUser.id}/reset-password`, {
+      method: "POST",
+    });
+
+    state.latestResetCode = {
+      userId: state.selectedUser.id,
+      code: payload.temporaryCode,
+      codeHint: payload.codeHint,
+      createdAt: new Date().toISOString(),
+    };
+
+    showToast(payload.message, "success");
+    await searchPlayers(elements.playerSearchInput.value.trim());
+    state.selectedUser =
+      state.users.find((user) => user.id === state.selectedUser.id) || payload.user;
+    renderSelectedPlayer();
+    await loadLogs();
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    state.isResettingPassword = false;
+    renderSelectedPlayer();
   }
 }
 
@@ -477,6 +569,36 @@ function renderLogs(type, rows) {
                   <td>${formatKamas(row.balanceAfter)}</td>
                   <td>${escapeHtml(row.adminUsername || "-")}</td>
                   <td>${escapeHtml(row.note || "-")}</td>
+                </tr>
+              `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
+    return;
+  }
+
+  if (type === "resets") {
+    elements.logsTable.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Joueur</th>
+            <th>Indice code</th>
+            <th>Admin</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map(
+              (row) => `
+                <tr>
+                  <td>${escapeHtml(row.username)}</td>
+                  <td>${escapeHtml(row.codeHint)}</td>
+                  <td>${escapeHtml(row.adminUsername)}</td>
+                  <td>${formatDate(row.createdAt)}</td>
                 </tr>
               `,
             )

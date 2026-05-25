@@ -1,5 +1,6 @@
 const express = require("express");
-const { serializeUser } = require("../server/auth");
+const crypto = require("crypto");
+const { hashPassword, serializeUser } = require("../server/auth");
 const {
   all,
   get,
@@ -15,6 +16,22 @@ const {
 const { parsePositiveInteger } = require("../server/utils");
 
 const router = express.Router();
+const RESET_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function generateResetCodePart(length = 4) {
+  return Array.from({ length }, () => {
+    const index = crypto.randomInt(0, RESET_CODE_ALPHABET.length);
+    return RESET_CODE_ALPHABET[index];
+  }).join("");
+}
+
+function generateTemporaryPasswordCode() {
+  return `KAMA-${generateResetCodePart()}-${generateResetCodePart()}`;
+}
+
+function getResetCodeHint(code) {
+  return `...${String(code || "").slice(-4)}`;
+}
 
 async function getRecentLoginLogs(limit = 12) {
   return all(
@@ -52,6 +69,25 @@ async function getRecentBalanceLogs(limit = 12) {
       INNER JOIN users ON users.id = balance_logs.user_id
       LEFT JOIN users AS admin ON admin.id = balance_logs.admin_user_id
       ORDER BY balance_logs.id DESC
+      LIMIT ?
+    `,
+    [limit],
+  );
+}
+
+async function getRecentPasswordResetLogs(limit = 20) {
+  return all(
+    `
+      SELECT
+        password_reset_logs.id,
+        users.username AS username,
+        admin.username AS adminUsername,
+        password_reset_logs.code_hint AS codeHint,
+        password_reset_logs.created_at AS createdAt
+      FROM password_reset_logs
+      INNER JOIN users ON users.id = password_reset_logs.user_id
+      INNER JOIN users AS admin ON admin.id = password_reset_logs.admin_user_id
+      ORDER BY password_reset_logs.id DESC
       LIMIT ?
     `,
     [limit],
@@ -261,6 +297,81 @@ router.get(
     res.json({
       success: true,
       users,
+    });
+  }),
+);
+
+router.post(
+  "/users/:userId/reset-password",
+  requireAdmin,
+  adminLimiter,
+  asyncHandler(async (req, res) => {
+    const userId = Number.parseInt(req.params.userId, 10);
+
+    if (!Number.isInteger(userId)) {
+      res.status(400).json({
+        success: false,
+        message: "Identifiant joueur invalide.",
+      });
+      return;
+    }
+
+    const temporaryCode = generateTemporaryPasswordCode();
+    const codeHint = getResetCodeHint(temporaryCode);
+    const passwordHash = await hashPassword(temporaryCode);
+
+    const updatedUser = await withTransaction(async () => {
+      const targetUser = await get("SELECT * FROM users WHERE id = ?", [userId]);
+      if (!targetUser) {
+        throw new Error("Joueur introuvable.");
+      }
+
+      if (targetUser.role !== "player") {
+        throw new Error("Le reset staff est reserve aux comptes joueurs.");
+      }
+
+      await run(
+        `
+          UPDATE users
+          SET password_hash = ?,
+              token_version = token_version + 1
+          WHERE id = ?
+        `,
+        [passwordHash, targetUser.id],
+      );
+
+      await run(
+        `
+          INSERT INTO password_reset_logs (
+            user_id,
+            admin_user_id,
+            code_hint
+          )
+          VALUES (?, ?, ?)
+        `,
+        [targetUser.id, req.user.id, codeHint],
+      );
+
+      await run(
+        `
+          INSERT INTO notifications (user_id, type, message)
+          VALUES (?, 'warning', ?)
+        `,
+        [
+          targetUser.id,
+          "Ton mot de passe a ete reinitialise par le staff. Recupere ton nouveau code aupres d'un admin.",
+        ],
+      );
+
+      return get("SELECT * FROM users WHERE id = ?", [targetUser.id]);
+    });
+
+    res.json({
+      success: true,
+      message: "Code temporaire genere. Transmets-le au joueur.",
+      user: serializeUser(updatedUser),
+      temporaryCode,
+      codeHint,
     });
   }),
 );
@@ -567,6 +678,15 @@ router.get(
         success: true,
         type,
         rows: await getRecentCashoutLogs(limit),
+      });
+      return;
+    }
+
+    if (type === "resets") {
+      res.json({
+        success: true,
+        type,
+        rows: await getRecentPasswordResetLogs(limit),
       });
       return;
     }

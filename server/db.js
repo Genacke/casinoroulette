@@ -184,6 +184,16 @@ async function initializeDatabase() {
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS password_reset_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      admin_user_id INTEGER NOT NULL,
+      code_hint TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id),
+      FOREIGN KEY(admin_user_id) REFERENCES users(id)
+    );
+
     CREATE TABLE IF NOT EXISTS chat_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -502,6 +512,10 @@ async function initializeDatabase() {
       WHERE status = 'pending';
     CREATE INDEX IF NOT EXISTS idx_login_logs_created_at
       ON login_logs (created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_password_reset_logs_created_at
+      ON password_reset_logs (created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_password_reset_logs_user_created_at
+      ON password_reset_logs (user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_rounds_status_key
       ON roulette_rounds (status, round_key DESC);
     CREATE INDEX IF NOT EXISTS idx_scheduled_bets_round_user
